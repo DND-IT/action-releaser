@@ -1,0 +1,57 @@
+name: 'action-releaser'
+description: 'Flexible GitHub Action for versioned releases powered by git-cliff'
+author: 'group:default/dai'
+
+inputs:
+  version-strategy:
+    description: 'Versioning strategy: semver, date-rolling, or numeric-rolling'
+    required: false
+    default: 'semver'
+  cliff-config:
+    description: 'Path to custom cliff.toml (auto-detects cliff.toml in repo root if not set)'
+    required: false
+    default: ''
+  tag-prefix:
+    description: 'Prefix for git tags (e.g. v, release-)'
+    required: false
+    default: 'v'
+  draft:
+    description: 'Create release as draft'
+    required: false
+    default: 'false'
+  prerelease:
+    description: 'Mark release as prerelease'
+    required: false
+    default: 'false'
+  dry-run:
+    description: 'Calculate version and changelog but do not create a tag or release'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'GitHub token for release creation. Needs contents:write scope.'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  version:
+    description: 'Calculated version string (empty if skipped)'
+  changelog:
+    description: 'Generated changelog text (empty if skipped)'
+  tag:
+    description: 'Created git tag (empty if skipped or dry-run)'
+  release-url:
+    description: 'GitHub release URL (empty if skipped or dry-run)'
+  previous-version:
+    description: 'Previous version tag (empty on first release)'
+  skipped:
+    description: 'true if no release was created, false otherwise'
+  dry-run:
+    description: 'true if dry-run mode was active'
+
+runs:
+  using: 'docker'
+  image: 'docker://ghcr.io/dnd-it/action-releaser:0.1.0' # x-release-please-version
+
+branding:
+  icon: 'tag'
+  color: 'green'
