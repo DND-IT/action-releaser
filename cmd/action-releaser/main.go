@@ -36,7 +36,10 @@ func run() error {
 	log.Printf("strategy=%s tag-prefix=%q release-mode=%s dry-run=%v",
 		cfg.VersionStrategy, cfg.TagPrefix, cfg.ReleaseMode, cfg.DryRun)
 
-	// 2. If release-mode is "pr" and this is a PR merge event, handle it.
+	// 2. Configure git auth for push operations.
+	gitutil.ConfigureAuth(cfg.GithubToken)
+
+	// 3. If release-mode is "pr" and this is a PR merge event, handle it.
 	if cfg.ReleaseMode == "pr" {
 		manifest, err := releasepr.DetectMerge()
 		if err != nil {

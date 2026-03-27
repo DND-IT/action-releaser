@@ -1,6 +1,7 @@
 package gitutil
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,12 +13,31 @@ var ErrShallowClone = fmt.Errorf("shallow clone detected: add 'fetch-depth: 0' t
 
 func init() {
 	// Docker containers don't trust the mounted workspace.
-	// Mark it as safe before any git operations.
 	workspace := os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
 		workspace = "/github/workspace"
 	}
 	exec.Command("git", "config", "--global", "--add", "safe.directory", workspace).Run() //nolint:errcheck
+}
+
+// ConfigureAuth sets up git to use the GitHub token for push operations.
+// Must be called before CreateTag/PushTag in GitHub Actions.
+func ConfigureAuth(token string) {
+	if token == "" {
+		return
+	}
+	server := os.Getenv("GITHUB_SERVER_URL")
+	if server == "" {
+		server = "https://github.com"
+	}
+	// Use the token via the extraheader method (same as actions/checkout).
+	exec.Command("git", "config", "--local", "user.name", "github-actions[bot]").Run()                                                                               //nolint:errcheck
+	exec.Command("git", "config", "--local", "user.email", "41898282+github-actions[bot]@users.noreply.github.com").Run()                                             //nolint:errcheck
+	exec.Command("git", "config", "--local", "http."+server+"/.extraheader", "AUTHORIZATION: basic "+basicAuth("x-access-token", token)).Run() //nolint:errcheck
+}
+
+func basicAuth(user, pass string) string {
+	return base64.StdEncoding.EncodeToString([]byte(user + ":" + pass))
 }
 
 // CheckShallowClone fails if the repo is a shallow clone.
