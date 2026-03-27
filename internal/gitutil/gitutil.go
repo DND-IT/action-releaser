@@ -1,7 +1,6 @@
 package gitutil
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,14 +29,19 @@ func ConfigureAuth(token string) {
 	if server == "" {
 		server = "https://github.com"
 	}
-	// Use the token via the extraheader method (same as actions/checkout).
-	exec.Command("git", "config", "--local", "user.name", "github-actions[bot]").Run()                                                                               //nolint:errcheck
-	exec.Command("git", "config", "--local", "user.email", "41898282+github-actions[bot]@users.noreply.github.com").Run()                                             //nolint:errcheck
-	exec.Command("git", "config", "--local", "http."+server+"/.extraheader", "AUTHORIZATION: basic "+basicAuth("x-access-token", token)).Run() //nolint:errcheck
-}
+	repo := os.Getenv("GITHUB_REPOSITORY")
+	if repo == "" {
+		return
+	}
 
-func basicAuth(user, pass string) string {
-	return base64.StdEncoding.EncodeToString([]byte(user + ":" + pass))
+	exec.Command("git", "config", "--local", "user.name", "github-actions[bot]").Run()                                    //nolint:errcheck
+	exec.Command("git", "config", "--local", "user.email", "41898282+github-actions[bot]@users.noreply.github.com").Run() //nolint:errcheck
+
+	// Set the remote URL with embedded token for push auth.
+	// https://github.com → https://x-access-token:TOKEN@github.com/owner/repo.git
+	host := strings.TrimPrefix(strings.TrimPrefix(server, "https://"), "http://")
+	authURL := fmt.Sprintf("https://x-access-token:%s@%s/%s.git", token, host, repo)
+	exec.Command("git", "remote", "set-url", "origin", authURL).Run() //nolint:errcheck
 }
 
 // CheckShallowClone fails if the repo is a shallow clone.
