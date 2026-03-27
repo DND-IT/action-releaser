@@ -56,7 +56,7 @@ outputs:
 
 runs:
   using: 'docker'
-  image: 'docker://ghcr.io/dnd-it/action-releaser:0.1.0' # x-release-please-version
+  image: 'Dockerfile'
 
 branding:
   icon: 'tag'
