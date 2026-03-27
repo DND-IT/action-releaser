@@ -2,12 +2,23 @@ package gitutil
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 // ErrShallowClone indicates the repository is a shallow clone.
 var ErrShallowClone = fmt.Errorf("shallow clone detected: add 'fetch-depth: 0' to your actions/checkout step")
+
+func init() {
+	// Docker containers don't trust the mounted workspace.
+	// Mark it as safe before any git operations.
+	workspace := os.Getenv("GITHUB_WORKSPACE")
+	if workspace == "" {
+		workspace = "/github/workspace"
+	}
+	exec.Command("git", "config", "--global", "--add", "safe.directory", workspace).Run() //nolint:errcheck
+}
 
 // CheckShallowClone fails if the repo is a shallow clone.
 func CheckShallowClone() error {
