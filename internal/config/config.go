@@ -73,28 +73,30 @@ func Load() (Config, error) {
 	}
 
 	// Overlay action inputs from environment variables.
-	if v := os.Getenv("INPUT_VERSION_STRATEGY"); v != "" {
+	// Docker actions receive INPUT_VERSION-STRATEGY (hyphens), not INPUT_VERSION_STRATEGY (underscores).
+	// Check both forms for compatibility.
+	if v := getInput("VERSION-STRATEGY", "VERSION_STRATEGY"); v != "" {
 		cfg.VersionStrategy = v
 	}
-	if v := os.Getenv("INPUT_TAG_PREFIX"); v != "" {
+	if v := getInput("TAG-PREFIX", "TAG_PREFIX"); v != "" {
 		cfg.TagPrefix = v
 	}
-	if v := os.Getenv("INPUT_CLIFF_CONFIG"); v != "" {
+	if v := getInput("CLIFF-CONFIG", "CLIFF_CONFIG"); v != "" {
 		cfg.CliffConfig = v
 	}
-	if v := os.Getenv("INPUT_DRAFT"); strings.EqualFold(v, "true") {
+	if v := getInput("DRAFT"); strings.EqualFold(v, "true") {
 		cfg.Draft = true
 	}
-	if v := os.Getenv("INPUT_PRERELEASE"); strings.EqualFold(v, "true") {
+	if v := getInput("PRERELEASE"); strings.EqualFold(v, "true") {
 		cfg.Prerelease = true
 	}
-	if v := os.Getenv("INPUT_RELEASE_MODE"); v != "" {
+	if v := getInput("RELEASE-MODE", "RELEASE_MODE"); v != "" {
 		cfg.ReleaseMode = v
 	}
-	if v := os.Getenv("INPUT_DRY_RUN"); strings.EqualFold(v, "true") {
+	if v := getInput("DRY-RUN", "DRY_RUN"); strings.EqualFold(v, "true") {
 		cfg.DryRun = true
 	}
-	cfg.GithubToken = os.Getenv("INPUT_GITHUB_TOKEN")
+	cfg.GithubToken = getInput("GITHUB-TOKEN", "GITHUB_TOKEN")
 	if cfg.GithubToken == "" {
 		cfg.GithubToken = os.Getenv("GITHUB_TOKEN")
 	}
@@ -116,4 +118,16 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// getInput reads a GitHub Actions input, checking multiple env var forms.
+// Docker actions receive INPUT_VERSION-STRATEGY (hyphens preserved),
+// while JS actions receive INPUT_VERSION_STRATEGY (hyphens→underscores).
+func getInput(names ...string) string {
+	for _, name := range names {
+		if v := os.Getenv("INPUT_" + name); v != "" {
+			return v
+		}
+	}
+	return ""
 }
