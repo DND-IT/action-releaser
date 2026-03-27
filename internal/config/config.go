@@ -13,6 +13,7 @@ type Config struct {
 	VersionStrategy string    `yaml:"version-strategy"`
 	TagPrefix       string    `yaml:"tag-prefix"`
 	CliffConfig     string    `yaml:"cliff-config"`
+	ReleaseMode     string    `yaml:"release-mode"`
 	Draft           bool      `yaml:"draft"`
 	Prerelease      bool      `yaml:"prerelease"`
 	DryRun          bool      `yaml:"-"`
@@ -35,6 +36,7 @@ func DefaultConfig() Config {
 	return Config{
 		VersionStrategy: "semver",
 		TagPrefix:       "v",
+		ReleaseMode:     "direct",
 	}
 }
 
@@ -56,6 +58,7 @@ func Load() (Config, error) {
 			VersionStrategy string    `yaml:"version-strategy"`
 			TagPrefix       string    `yaml:"tag-prefix"`
 			CliffConfig     string    `yaml:"cliff-config"`
+			ReleaseMode     string    `yaml:"release-mode"`
 			Draft           bool      `yaml:"draft"`
 			Prerelease      bool      `yaml:"prerelease"`
 			Packages        []Package `yaml:"packages"`
@@ -85,6 +88,9 @@ func Load() (Config, error) {
 	if v := os.Getenv("INPUT_PRERELEASE"); strings.EqualFold(v, "true") {
 		cfg.Prerelease = true
 	}
+	if v := os.Getenv("INPUT_RELEASE_MODE"); v != "" {
+		cfg.ReleaseMode = v
+	}
 	if v := os.Getenv("INPUT_DRY_RUN"); strings.EqualFold(v, "true") {
 		cfg.DryRun = true
 	}
@@ -99,6 +105,14 @@ func Load() (Config, error) {
 		// ok
 	default:
 		return Config{}, fmt.Errorf("unknown version-strategy %q: use semver, date-rolling, or numeric-rolling", cfg.VersionStrategy)
+	}
+
+	// Validate release mode.
+	switch cfg.ReleaseMode {
+	case "direct", "pr":
+		// ok
+	default:
+		return Config{}, fmt.Errorf("unknown release-mode %q: use direct or pr", cfg.ReleaseMode)
 	}
 
 	return cfg, nil

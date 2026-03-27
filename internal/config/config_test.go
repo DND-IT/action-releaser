@@ -24,7 +24,7 @@ func TestLoad_NoFile(t *testing.T) {
 	defer os.Chdir(orig)
 
 	// Clear env.
-	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
 	}
 
@@ -49,7 +49,7 @@ tag-prefix: "release-"
 draft: true
 `), 0644)
 
-	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
 	}
 
@@ -125,7 +125,7 @@ version-strategy: semver
 unknown-field: "oops"
 `), 0644)
 
-	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
 	}
 
@@ -143,7 +143,7 @@ func TestLoad_MalformedYAML(t *testing.T) {
 
 	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`{{{not yaml`), 0644)
 
-	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
 	}
 
@@ -190,7 +190,7 @@ packages:
     tag-pattern: "web/v*"
 `), 0644)
 
-	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
 	}
 
@@ -206,5 +206,85 @@ packages:
 	}
 	if cfg.Packages[1].Path != "services/web" {
 		t.Errorf("packages[1].Path = %q, want services/web", cfg.Packages[1].Path)
+	}
+}
+
+func TestLoad_ReleaseModePR(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	t.Setenv("INPUT_RELEASE_MODE", "pr")
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ReleaseMode != "pr" {
+		t.Errorf("release-mode = %q, want pr", cfg.ReleaseMode)
+	}
+}
+
+func TestLoad_ReleaseModeDefault(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ReleaseMode != "direct" {
+		t.Errorf("release-mode = %q, want direct", cfg.ReleaseMode)
+	}
+}
+
+func TestLoad_ReleaseModeInvalid(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	t.Setenv("INPUT_RELEASE_MODE", "invalid")
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid release-mode")
+	}
+}
+
+func TestLoad_ReleaseModeFromFile(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+version-strategy: semver
+release-mode: pr
+`), 0644)
+
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ReleaseMode != "pr" {
+		t.Errorf("release-mode = %q, want pr", cfg.ReleaseMode)
 	}
 }

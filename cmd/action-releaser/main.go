@@ -2,15 +2,19 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/google/go-github/v68/github"
 
 	"github.com/dnd-it/action-releaser/internal/changelog"
 	"github.com/dnd-it/action-releaser/internal/config"
 	"github.com/dnd-it/action-releaser/internal/gitutil"
 	"github.com/dnd-it/action-releaser/internal/output"
 	"github.com/dnd-it/action-releaser/internal/release"
+	"github.com/dnd-it/action-releaser/internal/releasepr"
 	"github.com/dnd-it/action-releaser/internal/strategy"
 )
 
@@ -29,27 +33,40 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("strategy=%s tag-prefix=%q dry-run=%v", cfg.VersionStrategy, cfg.TagPrefix, cfg.DryRun)
+	log.Printf("strategy=%s tag-prefix=%q release-mode=%s dry-run=%v",
+		cfg.VersionStrategy, cfg.TagPrefix, cfg.ReleaseMode, cfg.DryRun)
 
-	// 2. Shallow-clone guard.
+	// 2. If release-mode is "pr" and this is a PR merge event, handle it.
+	if cfg.ReleaseMode == "pr" {
+		manifest, err := releasepr.DetectMerge()
+		if err != nil {
+			return fmt.Errorf("detect merge: %w", err)
+		}
+		if manifest != nil {
+			log.Printf("release PR merge detected: tag=%s version=%s", manifest.Tag, manifest.Version)
+			return handleReleasePRMerge(cfg, manifest)
+		}
+		// Not a merge event — fall through to create/update PR.
+	}
+
+	// 3. Shallow-clone guard.
 	if err := gitutil.CheckShallowClone(); err != nil {
 		return err
 	}
 
-	// 3. Resolve strategy.
+	// 4. Resolve strategy.
 	strat, err := strategy.New(cfg.VersionStrategy)
 	if err != nil {
 		return err
 	}
 
-	// 4. Determine packages to release.
+	// 5. Determine packages to release.
 	packages := cfg.Packages
 	if len(packages) == 0 {
-		// Single-repo mode: one implicit package.
 		packages = []config.Package{{Name: ""}}
 	}
 
-	// 5. Process each package.
+	// 6. Process each package.
 	var (
 		hadFailure bool
 		hadRelease bool
@@ -61,13 +78,13 @@ func run() error {
 			pkgCfg.CurrentPackage = &pkg
 		}
 
-		if err := releasePackage(pkgCfg, strat, pkg); err != nil {
+		if err := processPackage(pkgCfg, strat, pkg); err != nil {
 			if pkg.Name != "" {
 				log.Printf("error releasing package %s: %v", pkg.Name, err)
 				hadFailure = true
 				continue
 			}
-			return err // Single-repo: fail immediately.
+			return err
 		}
 		hadRelease = true
 	}
@@ -75,7 +92,7 @@ func run() error {
 	if hadFailure {
 		if hadRelease {
 			log.Printf("partial failure: some packages released, some failed")
-			os.Exit(2) // Non-zero but distinct from fatal error (1).
+			os.Exit(2)
 		}
 		return fmt.Errorf("all packages failed to release")
 	}
@@ -83,7 +100,7 @@ func run() error {
 	return nil
 }
 
-func releasePackage(cfg config.Config, strat strategy.VersionStrategy, pkg config.Package) error {
+func processPackage(cfg config.Config, strat strategy.VersionStrategy, pkg config.Package) error {
 	// List tags.
 	prefix := cfg.TagPrefix
 	if pkg.TagPattern != "" {
@@ -103,7 +120,7 @@ func releasePackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 
 	if result.Skipped {
 		log.Printf("skipped: no release needed")
-		return setOutputs("", "", "", "", result.PreviousVersion, true, cfg.DryRun)
+		return setOutputs("", "", "", "", "", result.PreviousVersion, true, cfg.DryRun)
 	}
 
 	tag := cfg.TagPrefix + result.Version
@@ -122,9 +139,131 @@ func releasePackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 	// Dry-run: output version and changelog, skip tag/release.
 	if cfg.DryRun {
 		log.Printf("dry-run: skipping tag creation and release")
-		return setOutputs(result.Version, cl, "", "", result.PreviousVersion, false, true)
+		return setOutputs(result.Version, cl, "", "", "", result.PreviousVersion, false, true)
 	}
 
+	// Release PR mode: create/update PR instead of releasing directly.
+	if cfg.ReleaseMode == "pr" {
+		return createOrUpdateReleasePR(cfg, result.Version, tag, cl)
+	}
+
+	// Direct mode: create tag and release.
+	return directRelease(cfg, result, tag, cl, pkg)
+}
+
+func createOrUpdateReleasePR(cfg config.Config, version, tag, cl string) error {
+	owner, repo, err := release.OwnerRepoFromEnv()
+	if err != nil {
+		return err
+	}
+
+	ghClient := github.NewClient(nil).WithAuthToken(cfg.GithubToken)
+	client := releasepr.NewClient(ghClient, owner, repo)
+
+	baseBranch := os.Getenv("GITHUB_REF_NAME")
+	if baseBranch == "" {
+		baseBranch = "main"
+	}
+
+	prURL, err := client.CreateOrUpdate(context.Background(), version, tag, cl, baseBranch)
+	if err != nil {
+		return fmt.Errorf("create/update release PR: %w", err)
+	}
+
+	return setOutputs(version, cl, "", prURL, "", "", false, false)
+}
+
+func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error {
+	tag := manifest.Tag
+	version := manifest.Version
+
+	// If manifest didn't have version, recalculate.
+	if version == "" {
+		log.Printf("manifest missing version, recalculating")
+		if err := gitutil.CheckShallowClone(); err != nil {
+			return err
+		}
+		strat, err := strategy.New(cfg.VersionStrategy)
+		if err != nil {
+			return err
+		}
+		tags, err := gitutil.ListTags(cfg.TagPrefix)
+		if err != nil {
+			return err
+		}
+		result, err := strat.NextVersion(tags, cfg)
+		if err != nil {
+			return err
+		}
+		if result.Skipped {
+			log.Printf("skipped after recalculation")
+			return nil
+		}
+		version = result.Version
+		tag = cfg.TagPrefix + version
+	}
+
+	// Generate changelog for the release body.
+	cl, err := changelog.Generate(cfg)
+	if err != nil {
+		log.Printf("warning: changelog generation failed: %v", err)
+		cl = ""
+	}
+
+	// Check for tag conflict.
+	exists, err := gitutil.TagExists(tag)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("tag %s already exists", tag)
+	}
+
+	// Create and push tag.
+	if err := gitutil.CreateTag(tag, fmt.Sprintf("Release %s", tag)); err != nil {
+		return err
+	}
+	if err := gitutil.PushTag(tag); err != nil {
+		return err
+	}
+	log.Printf("tag %s created and pushed", tag)
+
+	// Create GitHub release.
+	owner, repo, err := release.OwnerRepoFromEnv()
+	if err != nil {
+		return err
+	}
+
+	res, err := release.Create(context.Background(), release.Params{
+		Owner:      owner,
+		Repo:       repo,
+		Tag:        tag,
+		Name:       tag,
+		Body:       cl,
+		Draft:      cfg.Draft,
+		Prerelease: cfg.Prerelease,
+		Token:      cfg.GithubToken,
+	})
+	if err != nil {
+		return fmt.Errorf("create release: %w", err)
+	}
+	log.Printf("release created: %s", res.URL)
+
+	// Cleanup: swap labels, delete branch.
+	ghClient := github.NewClient(nil).WithAuthToken(cfg.GithubToken)
+	prClient := releasepr.NewClient(ghClient, owner, repo)
+
+	// Read PR number from event.
+	prNumber := getPRNumberFromEvent()
+	branchName := releasepr.BranchPrefix + tag
+	if prNumber > 0 {
+		prClient.Cleanup(context.Background(), prNumber, branchName)
+	}
+
+	return setOutputs(version, cl, res.Tag, res.URL, "", "", false, false)
+}
+
+func directRelease(cfg config.Config, result strategy.Result, tag, cl string, pkg config.Package) error {
 	// Check for tag conflict.
 	exists, err := gitutil.TagExists(tag)
 	if err != nil {
@@ -169,15 +308,16 @@ func releasePackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 	}
 	log.Printf("release created: %s", res.URL)
 
-	return setOutputs(result.Version, cl, res.Tag, res.URL, result.PreviousVersion, false, false)
+	return setOutputs(result.Version, cl, res.Tag, res.URL, "", result.PreviousVersion, false, false)
 }
 
-func setOutputs(version, changelogText, tag, releaseURL, previousVersion string, skipped, dryRun bool) error {
+func setOutputs(version, changelogText, tag, releaseURL, prURL, previousVersion string, skipped, dryRun bool) error {
 	pairs := []struct{ name, value string }{
 		{"version", version},
 		{"changelog", changelogText},
 		{"tag", tag},
 		{"release-url", releaseURL},
+		{"pr-url", prURL},
 		{"previous-version", previousVersion},
 		{"skipped", boolStr(skipped)},
 		{"dry-run", boolStr(dryRun)},
@@ -195,4 +335,24 @@ func boolStr(b bool) string {
 		return "true"
 	}
 	return "false"
+}
+
+func getPRNumberFromEvent() int {
+	eventPath := os.Getenv("GITHUB_EVENT_PATH")
+	if eventPath == "" {
+		return 0
+	}
+	data, err := os.ReadFile(eventPath)
+	if err != nil {
+		return 0
+	}
+	var event struct {
+		PullRequest struct {
+			Number int `json:"number"`
+		} `json:"pull_request"`
+	}
+	if err := json.Unmarshal(data, &event); err != nil {
+		return 0
+	}
+	return event.PullRequest.Number
 }

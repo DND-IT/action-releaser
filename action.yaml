@@ -15,6 +15,10 @@ inputs:
     description: 'Prefix for git tags (e.g. v, release-)'
     required: false
     default: 'v'
+  release-mode:
+    description: 'Release mode: direct (immediate release) or pr (create release PR, release on merge)'
+    required: false
+    default: 'direct'
   draft:
     description: 'Create release as draft'
     required: false
@@ -45,6 +49,8 @@ outputs:
     description: 'Previous version tag (empty on first release)'
   skipped:
     description: 'true if no release was created, false otherwise'
+  pr-url:
+    description: 'Release PR URL (only in pr mode)'
   dry-run:
     description: 'true if dry-run mode was active'
 
