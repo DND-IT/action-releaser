@@ -2,6 +2,8 @@ package strategy
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/dnd-it/action-releaser/internal/config"
 )
@@ -38,5 +40,62 @@ func New(name string) (VersionStrategy, error) {
 		return &NumericRolling{}, nil
 	default:
 		return nil, fmt.Errorf("unknown strategy %q: use semver, date-rolling, or numeric-rolling", name)
+	}
+}
+
+// Version format regexes — used to validate the version part after stripping the tag prefix.
+var (
+	semverVersionRe  = regexp.MustCompile(`^\d+\.\d+\.\d+`)
+	dateVersionRe    = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
+	numericVersionRe = regexp.MustCompile(`^\d+$`)
+)
+
+// IsValidVersion checks whether a version string (prefix already stripped)
+// matches the expected format for the given strategy.
+func IsValidVersion(strategyName, version string) bool {
+	switch strategyName {
+	case "semver":
+		return semverVersionRe.MatchString(version)
+	case "date-rolling":
+		return dateVersionRe.MatchString(version)
+	case "numeric-rolling":
+		return numericVersionRe.MatchString(version)
+	default:
+		return false
+	}
+}
+
+// FilterTags returns only tags where the prefix matches AND the remainder
+// is a valid version for the strategy. This prevents cross-contamination
+// in monorepos where a tag like "python-api-vgo-service-v1.13.0" could
+// match the prefix "python-api-v" but has an invalid version suffix.
+func FilterTags(tags []string, prefix, strategyName string) []string {
+	var out []string
+	for _, t := range tags {
+		if !strings.HasPrefix(t, prefix) {
+			continue
+		}
+		version := strings.TrimPrefix(t, prefix)
+		if IsValidVersion(strategyName, version) {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// TagPatternRegex returns a regex suitable for git-cliff's --tag-pattern flag.
+// It scopes git-cliff's version boundary detection to only tags belonging to
+// this service/prefix, preventing it from using unrelated tags.
+func TagPatternRegex(prefix, strategyName string) string {
+	escaped := regexp.QuoteMeta(prefix)
+	switch strategyName {
+	case "semver":
+		return escaped + `\d+\.\d+\.\d+`
+	case "date-rolling":
+		return escaped + `\d{4}\.\d{2}\.\d{2}`
+	case "numeric-rolling":
+		return escaped + `\d+$`
+	default:
+		return escaped + `.*`
 	}
 }

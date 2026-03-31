@@ -113,7 +113,18 @@ func processPackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 	if err != nil {
 		return err
 	}
-	log.Printf("found %d tags matching prefix %q", len(tags), prefix)
+
+	// Filter tags: after stripping the prefix, the remainder must be a valid
+	// version for the strategy. This prevents cross-contamination in monorepos
+	// where bad tags (e.g. python-api-vgo-service-v1.13.0) match the glob but
+	// have garbage version suffixes.
+	tags = strategy.FilterTags(tags, cfg.TagPrefix, cfg.VersionStrategy)
+	log.Printf("found %d valid tags matching prefix %q", len(tags), prefix)
+
+	// Compute effective tag pattern for git-cliff scoping.
+	if pkg.TagPattern == "" && cfg.TagPrefix != "" {
+		cfg.EffectiveTagPattern = strategy.TagPatternRegex(cfg.TagPrefix, cfg.VersionStrategy)
+	}
 
 	// Calculate next version.
 	result, err := strat.NextVersion(tags, cfg)

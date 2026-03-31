@@ -57,8 +57,13 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.Path != "" {
 		args = append(args, "--include-path", cfg.CurrentPackage.Path+"/**")
 	}
+	// Always pass --tag-pattern to scope git-cliff's version boundary detection.
+	// Without this, git-cliff sees ALL tags and may use unrelated ones (e.g.
+	// go-service-v1.13.0) as the latest version when releasing python-api.
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.TagPattern != "" {
 		args = append(args, "--tag-pattern", cfg.CurrentPackage.TagPattern)
+	} else if cfg.TagPrefix != "" {
+		args = append(args, "--tag-pattern", TagPatternRegex(cfg.TagPrefix, "semver"))
 	}
 
 	cmd := exec.Command("git-cliff", args...)
@@ -76,6 +81,12 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 
 	if nextVersion == "" {
 		return Result{Skipped: true}, nil
+	}
+
+	// Validate that git-cliff returned a proper semver version.
+	// This guards against git-cliff picking up unrelated tags and returning garbage.
+	if !IsValidVersion("semver", nextVersion) {
+		return Result{}, fmt.Errorf("git-cliff returned invalid semver %q (from output %q); check --tag-pattern filtering", nextVersion, strings.TrimSpace(string(out)))
 	}
 
 	// If git-cliff returns the same version as the current tag, skip.

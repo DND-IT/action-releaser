@@ -22,8 +22,13 @@ func Generate(cfg config.Config) (string, error) {
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.Path != "" {
 		args = append(args, "--include-path", cfg.CurrentPackage.Path+"/**")
 	}
+	// Always pass --tag-pattern to scope git-cliff's tag scanning to this
+	// service's tags. Without this, git-cliff may use unrelated tags as
+	// version boundaries, producing incorrect changelogs.
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.TagPattern != "" {
 		args = append(args, "--tag-pattern", cfg.CurrentPackage.TagPattern)
+	} else if cfg.EffectiveTagPattern != "" {
+		args = append(args, "--tag-pattern", cfg.EffectiveTagPattern)
 	}
 
 	cmd := exec.Command("git-cliff", args...)

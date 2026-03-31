@@ -22,6 +22,11 @@ type Config struct {
 
 	// Set per-package during monorepo iteration.
 	CurrentPackage *Package `yaml:"-"`
+
+	// EffectiveTagPattern is a regex for git-cliff --tag-pattern, computed at
+	// runtime from TagPrefix + VersionStrategy. Scopes git-cliff to only see
+	// tags belonging to this service.
+	EffectiveTagPattern string `yaml:"-"`
 }
 
 // Package defines a monorepo package with its own release scope.
