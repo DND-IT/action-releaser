@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/DND-IT/action-releaser/compare/v0.1.1...v0.1.2) (2026-03-31)
+
+
+### Bug Fixes
+
+* strict tag-prefix matching to prevent monorepo cross-contamination ([dd7da33](https://github.com/DND-IT/action-releaser/commit/dd7da3313fbfcfc9987ae106551cd6ffdc892a2e))
+
 ## [0.1.1](https://github.com/DND-IT/action-releaser/compare/v0.1.0...v0.1.1) (2026-03-27)
 
 
