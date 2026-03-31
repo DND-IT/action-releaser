@@ -56,6 +56,8 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 	}
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.Path != "" {
 		args = append(args, "--include-path", cfg.CurrentPackage.Path+"/**")
+	} else if cfg.IncludePath != "" {
+		args = append(args, "--include-path", cfg.IncludePath)
 	}
 	// Always pass --tag-pattern to scope git-cliff's version boundary detection.
 	// Without this, git-cliff sees ALL tags and may use unrelated ones (e.g.

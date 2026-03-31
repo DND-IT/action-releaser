@@ -27,6 +27,10 @@ inputs:
     description: 'Mark release as prerelease'
     required: false
     default: 'false'
+  include-path:
+    description: 'Glob pattern to scope commits by file path (e.g. "services/api/**"). Used in monorepos to ensure only commits touching this path affect version calculation and changelog.'
+    required: false
+    default: ''
   dry-run:
     description: 'Calculate version and changelog but do not create a tag or release'
     required: false

@@ -265,6 +265,48 @@ func TestLoad_ReleaseModeInvalid(t *testing.T) {
 	}
 }
 
+func TestLoad_IncludePath(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	t.Setenv("INPUT_INCLUDE-PATH", "services/python-api/**")
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.IncludePath != "services/python-api/**" {
+		t.Errorf("include-path = %q, want %q", cfg.IncludePath, "services/python-api/**")
+	}
+}
+
+func TestLoad_IncludePathNotInYAML(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	// include-path in .release.yml should be rejected as unknown field.
+	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+version-strategy: semver
+include-path: "services/api/**"
+`), 0644)
+
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN", "INPUT_INCLUDE-PATH", "INPUT_INCLUDE_PATH"} {
+		t.Setenv(k, "")
+	}
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error: include-path in .release.yml should be rejected as unknown field")
+	}
+}
+
 func TestLoad_ReleaseModeFromFile(t *testing.T) {
 	dir := t.TempDir()
 	orig, _ := os.Getwd()

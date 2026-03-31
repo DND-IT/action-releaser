@@ -18,6 +18,7 @@ type Config struct {
 	Prerelease      bool      `yaml:"prerelease"`
 	DryRun          bool      `yaml:"-"`
 	GithubToken     string    `yaml:"-"`
+	IncludePath     string    `yaml:"-"`
 	Packages        []Package `yaml:"packages"`
 
 	// Set per-package during monorepo iteration.
@@ -100,6 +101,9 @@ func Load() (Config, error) {
 	}
 	if v := getInput("DRY-RUN", "DRY_RUN"); strings.EqualFold(v, "true") {
 		cfg.DryRun = true
+	}
+	if v := getInput("INCLUDE-PATH", "INCLUDE_PATH"); v != "" {
+		cfg.IncludePath = v
 	}
 	cfg.GithubToken = getInput("GITHUB-TOKEN", "GITHUB_TOKEN")
 	if cfg.GithubToken == "" {
