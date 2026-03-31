@@ -1,0 +1,18 @@
+# Changelog
+
+## [0.1.1](https://github.com/DND-IT/action-releaser/compare/v0.1.0...v0.1.1) (2026-03-27)
+
+
+### Features
+
+* add release PR mode for gated releases ([bff03a0](https://github.com/DND-IT/action-releaser/commit/bff03a0f14ae88bedd835f748f8e0721aca0c71e))
+* initial implementation of action-releaser ([6009e9f](https://github.com/DND-IT/action-releaser/commit/6009e9f7ba6b0442ba5b9ac5b00bacbe63706386))
+
+
+### Bug Fixes
+
+* add safe.directory for Docker container workspace trust ([7d6ada2](https://github.com/DND-IT/action-releaser/commit/7d6ada270cbf9e4e69c3e980e3a62d516cde4125))
+* configure git auth for tag push in Docker containers ([ccad4d6](https://github.com/DND-IT/action-releaser/commit/ccad4d6b4d34b64efe47ad351d42dc7c2af4763c))
+* read Docker action inputs with hyphens (INPUT_DRY-RUN not INPUT_DRY_RUN) ([c651d57](https://github.com/DND-IT/action-releaser/commit/c651d57629147ae71204bc47ba57274ca72c5c2e))
+* use Dockerfile for action image until first GHCR publish ([c4e9eed](https://github.com/DND-IT/action-releaser/commit/c4e9eed774e9a725b0ca51d675558f47ad11dfc3))
+* use token-embedded remote URL for git push auth ([4c189e2](https://github.com/DND-IT/action-releaser/commit/4c189e23892a1b76f9898f8edf38faaa0a130187))
