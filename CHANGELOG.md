@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/DND-IT/action-releaser/compare/v0.1.3...v0.1.4) (2026-03-31)
+
+
+### Bug Fixes
+
+* use stable release branch names to prevent noisy PR diffs ([f1d3f46](https://github.com/DND-IT/action-releaser/commit/f1d3f46d5adf15928461c4e2d6149f175ae2d76b))
+
 ## [0.1.3](https://github.com/DND-IT/action-releaser/compare/v0.1.2...v0.1.3) (2026-03-31)
 
 
