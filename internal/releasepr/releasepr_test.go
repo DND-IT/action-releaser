@@ -8,6 +8,30 @@ import (
 	"testing"
 )
 
+func TestReleaseBranchName(t *testing.T) {
+	tests := []struct {
+		tag     string
+		version string
+		want    string
+	}{
+		{"go-service-v1.14.0", "1.14.0", "release/go-service"},
+		{"python-api-v2.0.0", "2.0.0", "release/python-api"},
+		{"ts-spa-2026.03.31", "2026.03.31", "release/ts-spa"},
+		{"v1.0.0", "1.0.0", "release/next"},
+		{"sdk/v1.0.0", "1.0.0", "release/sdk"},
+		{"cli/v2.1.0", "2.1.0", "release/cli"},
+		{"build-42", "42", "release/build"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.tag, func(t *testing.T) {
+			got := ReleaseBranchName(tt.tag, tt.version)
+			if got != tt.want {
+				t.Errorf("ReleaseBranchName(%q, %q) = %q, want %q", tt.tag, tt.version, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDetectMerge_NotPREvent(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_NAME", "push")
 	m, err := DetectMerge()
@@ -90,7 +114,7 @@ func TestDetectMerge_ValidMerge(t *testing.T) {
 		"action": "closed",
 		"pull_request": map[string]interface{}{
 			"merged": true,
-			"head":   map[string]string{"ref": "release/v1.2.0"},
+			"head":   map[string]string{"ref": "release/go-service"},
 			"labels": []map[string]string{{"name": LabelPending}},
 		},
 	}
@@ -105,8 +129,9 @@ func TestDetectMerge_ValidMerge(t *testing.T) {
 	if m == nil {
 		t.Fatal("expected manifest for valid release PR merge")
 	}
-	if m.Tag != "v1.2.0" {
-		t.Errorf("tag = %q, want v1.2.0", m.Tag)
+	// With stable branch names, fallback returns empty manifest for recalculation.
+	if m.Tag != "" {
+		t.Errorf("tag = %q, want empty (fallback triggers recalculation)", m.Tag)
 	}
 }
 

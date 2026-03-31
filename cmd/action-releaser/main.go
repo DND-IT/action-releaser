@@ -269,7 +269,7 @@ func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error
 
 	// Read PR number from event.
 	prNumber := getPRNumberFromEvent()
-	branchName := releasepr.BranchPrefix + tag
+	branchName := releasepr.ReleaseBranchName(tag, version)
 	if prNumber > 0 {
 		prClient.Cleanup(context.Background(), prNumber, branchName)
 	}

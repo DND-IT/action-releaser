@@ -44,14 +44,28 @@ func NewClient(gh *github.Client, owner, repo string) *Client {
 	return &Client{gh: gh, owner: owner, repo: repo}
 }
 
+// ReleaseBranchName derives a stable, reusable release branch name from a tag
+// and version. For example, tag "go-service-v1.14.0" with version "1.14.0"
+// produces "release/go-service". This ensures each service gets a single
+// long-lived release branch rather than a new branch per version, keeping
+// PR commit diffs minimal (just the manifest commit).
+func ReleaseBranchName(tag, version string) string {
+	prefix := strings.TrimSuffix(tag, version)
+	name := strings.TrimRight(prefix, "-_/v")
+	if name == "" {
+		name = "next"
+	}
+	return BranchPrefix + name
+}
+
 // CreateOrUpdate creates a new release PR or updates an existing one.
 // The PR body contains the changelog preview. A .release-pending.json
 // manifest is committed to the release branch.
 func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch string) (prURL string, err error) {
-	branchName := BranchPrefix + tag
+	branchName := ReleaseBranchName(tag, version)
 
-	// Search for existing release PR by label.
-	existing, err := c.findPendingPR(ctx)
+	// Search for existing release PR by label and branch.
+	existing, err := c.findPendingPR(ctx, branchName)
 	if err != nil {
 		return "", fmt.Errorf("search release PRs: %w", err)
 	}
@@ -177,9 +191,11 @@ func DetectMerge() (*Manifest, error) {
 	manifest, err := readManifestFromWorkspace()
 	if err != nil {
 		log.Printf("warning: could not read manifest, will recalculate: %v", err)
-		// Return a marker manifest — caller should recalculate version.
-		tag := strings.TrimPrefix(event.PullRequest.Head.Ref, BranchPrefix)
-		return &Manifest{Tag: tag}, nil
+		// Return an empty manifest — caller will recalculate version from tags.
+		// With stable branch names (e.g. "release/go-service"), the branch name
+		// no longer encodes the full tag, so we rely on the manifest file or
+		// recalculation instead.
+		return &Manifest{}, nil
 	}
 
 	return manifest, nil
@@ -212,9 +228,10 @@ func (c *Client) Cleanup(ctx context.Context, prNumber int, branchName string) {
 
 // --- internal helpers ---
 
-func (c *Client) findPendingPR(ctx context.Context) (*github.PullRequest, error) {
+func (c *Client) findPendingPR(ctx context.Context, branchName string) (*github.PullRequest, error) {
 	prs, _, err := c.gh.PullRequests.List(ctx, c.owner, c.repo, &github.PullRequestListOptions{
 		State: "open",
+		Head:  c.owner + ":" + branchName,
 	})
 	if err != nil {
 		return nil, err
