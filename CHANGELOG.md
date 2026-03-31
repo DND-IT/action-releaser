@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/DND-IT/action-releaser/compare/v0.1.4...v0.1.5) (2026-03-31)
+
+
+### Bug Fixes
+
+* remove --include-path from git-cliff --bumped-version ([fd4bed6](https://github.com/DND-IT/action-releaser/commit/fd4bed6bdc151b629710f264db97da82271a8207))
+
 ## [0.1.4](https://github.com/DND-IT/action-releaser/compare/v0.1.3...v0.1.4) (2026-03-31)
 
 
