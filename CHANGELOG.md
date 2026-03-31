@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/DND-IT/action-releaser/compare/v0.1.2...v0.1.3) (2026-03-31)
+
+
+### Features
+
+* add include-path input for monorepo commit scoping ([e568c4b](https://github.com/DND-IT/action-releaser/commit/e568c4b04c441b7d0faa0ec7a5a9950cfe601ac5))
+
 ## [0.1.2](https://github.com/DND-IT/action-releaser/compare/v0.1.1...v0.1.2) (2026-03-31)
 
 
