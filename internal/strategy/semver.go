@@ -54,11 +54,12 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 	if cliffConfig != "" {
 		args = append([]string{"--config", cliffConfig}, args...)
 	}
-	if cfg.CurrentPackage != nil && cfg.CurrentPackage.Path != "" {
-		args = append(args, "--include-path", cfg.CurrentPackage.Path+"/**")
-	} else if cfg.IncludePath != "" {
-		args = append(args, "--include-path", cfg.IncludePath)
-	}
+	// Do NOT pass --include-path here. git-cliff --bumped-version with
+	// --include-path fails to see unreleased commits after the latest tag,
+	// returning the current version instead of the bumped one. The
+	// --tag-pattern alone correctly scopes version boundary detection.
+	// --include-path is only used in changelog.Generate() for release notes.
+	//
 	// Always pass --tag-pattern to scope git-cliff's version boundary detection.
 	// Without this, git-cliff sees ALL tags and may use unrelated ones (e.g.
 	// go-service-v1.13.0) as the latest version when releasing python-api.
