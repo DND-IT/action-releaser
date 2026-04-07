@@ -93,7 +93,7 @@ Simple incrementing number.
 | Input | Description | Default |
 |-------|-------------|---------|
 | `version-strategy` | `semver`, `date-rolling`, or `numeric-rolling` | `semver` |
-| `tag-prefix` | Prefix for git tags (e.g. `v`, `release-`) | `v` |
+| `tag-prefix` | Prefix for git tags (e.g. `v`, `release-`) | `""` |
 | `cliff-config` | Path to custom cliff.toml | auto-detect |
 | `draft` | Create release as draft | `false` |
 | `prerelease` | Mark release as prerelease | `false` |

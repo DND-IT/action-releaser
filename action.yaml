@@ -14,7 +14,7 @@ inputs:
   tag-prefix:
     description: 'Prefix for git tags (e.g. v, release-)'
     required: false
-    default: 'v'
+    default: ''
   release-mode:
     description: 'Release mode: direct (immediate release) or pr (create release PR, release on merge)'
     required: false
