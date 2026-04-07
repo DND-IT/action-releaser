@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/DND-IT/action-releaser/compare/v0.1.5...v0.1.6) (2026-04-07)
+
+
+### Bug Fixes
+
+* change default TagPrefix from "v" to empty string ([340d4fa](https://github.com/DND-IT/action-releaser/commit/340d4fa550511a46bb04e7065df5ba17aec3a951))
+
 ## [0.1.5](https://github.com/DND-IT/action-releaser/compare/v0.1.4...v0.1.5) (2026-03-31)
 
 
