@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.7](https://github.com/DND-IT/action-releaser/compare/v0.1.6...v0.1.7) (2026-04-07)
+
+
+### Features
+
+* support .release.yaml in addition to .release.yml ([fdf084b](https://github.com/DND-IT/action-releaser/commit/fdf084b887f671f69c7a11209ba3074e2b2e24dc))
+
+
+### Bug Fixes
+
+* change action.yaml tag-prefix default to empty string ([2d601ea](https://github.com/DND-IT/action-releaser/commit/2d601ea9fb943cf392ad92c41f10a0c7de899973))
+
 ## [0.1.6](https://github.com/DND-IT/action-releaser/compare/v0.1.5...v0.1.6) (2026-04-07)
 
 
