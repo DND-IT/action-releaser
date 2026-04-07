@@ -68,6 +68,59 @@ draft: true
 	}
 }
 
+func TestLoad_WithYAMLExtension(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
+version-strategy: date-rolling
+tag-prefix: "deploy-"
+`), 0644)
+
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.VersionStrategy != "date-rolling" {
+		t.Errorf("strategy = %q, want date-rolling", cfg.VersionStrategy)
+	}
+	if cfg.TagPrefix != "deploy-" {
+		t.Errorf("prefix = %q, want deploy-", cfg.TagPrefix)
+	}
+}
+
+func TestLoad_YMLTakesPrecedenceOverYAML(t *testing.T) {
+	dir := t.TempDir()
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+tag-prefix: "from-yml"
+`), 0644)
+	os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
+tag-prefix: "from-yaml"
+`), 0644)
+
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TagPrefix != "from-yml" {
+		t.Errorf("prefix = %q, want from-yml (.yml should take precedence)", cfg.TagPrefix)
+	}
+}
+
 func TestLoad_EnvOverridesFile(t *testing.T) {
 	dir := t.TempDir()
 	orig, _ := os.Getwd()

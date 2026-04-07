@@ -46,18 +46,28 @@ func DefaultConfig() Config {
 	}
 }
 
-// Load reads .release.yml (if present), then overlays action inputs (env vars).
+// Load reads .release.yml or .release.yaml (if present), then overlays action inputs (env vars).
 // Action inputs always win when explicitly set.
 //
-// Priority: action inputs > .release.yml > defaults
+// Priority: action inputs > .release.yml/.release.yaml > defaults
 func Load() (Config, error) {
 	cfg := DefaultConfig()
 
-	// Read .release.yml if it exists.
-	data, err := os.ReadFile(".release.yml")
-	if err == nil {
+	// Read .release.yml or .release.yaml if either exists (.yml takes precedence).
+	configFile := ""
+	for _, name := range []string{".release.yml", ".release.yaml"} {
+		if _, err := os.Stat(name); err == nil {
+			configFile = name
+			break
+		}
+	}
+	if configFile != "" {
+		data, err := os.ReadFile(configFile)
+		if err != nil {
+			return Config{}, fmt.Errorf("read %s: %w", configFile, err)
+		}
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
-			return Config{}, fmt.Errorf("parse .release.yml: %w", err)
+			return Config{}, fmt.Errorf("parse %s: %w", configFile, err)
 		}
 		// Strict mode: re-decode to check for unknown fields.
 		strict := struct {
@@ -72,10 +82,8 @@ func Load() (Config, error) {
 		dec := yaml.NewDecoder(strings.NewReader(string(data)))
 		dec.KnownFields(true)
 		if err := dec.Decode(&strict); err != nil {
-			return Config{}, fmt.Errorf("parse .release.yml: unknown field: %w", err)
+			return Config{}, fmt.Errorf("parse %s: unknown field: %w", configFile, err)
 		}
-	} else if !os.IsNotExist(err) {
-		return Config{}, fmt.Errorf("read .release.yml: %w", err)
 	}
 
 	// Overlay action inputs from environment variables.
