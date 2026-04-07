@@ -41,7 +41,7 @@ type Package struct {
 func DefaultConfig() Config {
 	return Config{
 		VersionStrategy: "semver",
-		TagPrefix:       "v",
+		TagPrefix:       "",
 		ReleaseMode:     "direct",
 	}
 }

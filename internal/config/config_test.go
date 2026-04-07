@@ -11,8 +11,8 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.VersionStrategy != "semver" {
 		t.Errorf("default strategy = %q, want semver", cfg.VersionStrategy)
 	}
-	if cfg.TagPrefix != "v" {
-		t.Errorf("default prefix = %q, want v", cfg.TagPrefix)
+	if cfg.TagPrefix != "" {
+		t.Errorf("default prefix = %q, want empty", cfg.TagPrefix)
 	}
 }
 
