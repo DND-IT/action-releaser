@@ -11,7 +11,9 @@ func TestSet_SingleLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("GITHUB_OUTPUT", f.Name())
 
 	if err := Set("version", "1.2.3"); err != nil {
@@ -29,7 +31,9 @@ func TestSet_MultiLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("GITHUB_OUTPUT", f.Name())
 
 	if err := Set("changelog", "line1\nline2\nline3"); err != nil {

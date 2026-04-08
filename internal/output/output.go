@@ -20,7 +20,6 @@ func Set(name, value string) error {
 	if err != nil {
 		return fmt.Errorf("open GITHUB_OUTPUT: %w", err)
 	}
-	defer f.Close()
 
 	if strings.Contains(value, "\n") {
 		// Multi-line: use heredoc delimiter.
@@ -29,5 +28,9 @@ func Set(name, value string) error {
 	} else {
 		_, err = fmt.Fprintf(f, "%s=%s\n", name, value)
 	}
-	return err
+	if err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
 }
