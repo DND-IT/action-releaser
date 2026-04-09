@@ -25,12 +25,13 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version-file: "go.mod"
+
+      - name: install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
+        run: golangci-lint run
 
   test:
     runs-on: ubuntu-latest
@@ -41,7 +42,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version-file: "go.mod"
 
       - name: run tests
         run: go test -v -race -coverprofile=coverage.out ./...
@@ -62,12 +63,16 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version-file: "go.mod"
 
       - name: install git-cliff
-        uses: orhun/git-cliff-action@v4
-        with:
-          args: --version
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/orhun/git-cliff/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+          VERSION=${LATEST#v}
+          URL="https://github.com/orhun/git-cliff/releases/download/${LATEST}/git-cliff-${VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -sSL "$URL" | tar -xz
+          sudo install -m755 "$(find . -name 'git-cliff' -type f | head -1)" /usr/local/bin/git-cliff
+          git-cliff --version
 
       - name: build binary
         run: go build -o action-releaser ./cmd/action-releaser

@@ -150,13 +150,13 @@ func TestDetectMerge_WithManifestFile(t *testing.T) {
 
 	// Write a manifest file in the working directory.
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
 	manifest := Manifest{Version: "2.0.0", Strategy: "semver", Tag: "v2.0.0"}
 	data, _ := json.Marshal(manifest)
-	os.WriteFile(ManifestFile, data, 0644)
+	if err := os.WriteFile(ManifestFile, data, 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	m, err := DetectMerge()
 	if err != nil {

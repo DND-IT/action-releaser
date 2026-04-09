@@ -18,10 +18,7 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestLoad_NoFile(t *testing.T) {
 	// Run in a temp dir with no .release.yml.
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	// Clear env.
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
@@ -39,15 +36,15 @@ func TestLoad_NoFile(t *testing.T) {
 
 func TestLoad_WithFile(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: date-rolling
 tag-prefix: "release-"
 draft: true
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -70,14 +67,14 @@ draft: true
 
 func TestLoad_WithYAMLExtension(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
 version-strategy: date-rolling
 tag-prefix: "deploy-"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -97,16 +94,18 @@ tag-prefix: "deploy-"
 
 func TestLoad_YMLTakesPrecedenceOverYAML(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 tag-prefix: "from-yml"
-`), 0644)
-	os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
 tag-prefix: "from-yaml"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -123,14 +122,14 @@ tag-prefix: "from-yaml"
 
 func TestLoad_EnvOverridesFile(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: date-rolling
 tag-prefix: "release-"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Setenv("INPUT_VERSION_STRATEGY", "numeric-rolling")
 	t.Setenv("INPUT_TAG_PREFIX", "build-")
@@ -151,10 +150,7 @@ tag-prefix: "release-"
 }
 
 func TestLoad_InvalidStrategy(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	t.Setenv("INPUT_VERSION_STRATEGY", "invalid")
 	for _, k := range []string{"INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
@@ -169,14 +165,14 @@ func TestLoad_InvalidStrategy(t *testing.T) {
 
 func TestLoad_UnknownFields(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: semver
 unknown-field: "oops"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -190,11 +186,11 @@ unknown-field: "oops"
 
 func TestLoad_MalformedYAML(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`{{{not yaml`), 0644)
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`{{{not yaml`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -207,10 +203,7 @@ func TestLoad_MalformedYAML(t *testing.T) {
 }
 
 func TestLoad_DryRun(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	t.Setenv("INPUT_DRY_RUN", "true")
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
@@ -228,11 +221,9 @@ func TestLoad_DryRun(t *testing.T) {
 
 func TestLoad_Packages(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: semver
 packages:
   - name: api
@@ -241,7 +232,9 @@ packages:
   - name: web
     path: services/web
     tag-pattern: "web/v*"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -263,10 +256,7 @@ packages:
 }
 
 func TestLoad_ReleaseModePR(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	t.Setenv("INPUT_RELEASE_MODE", "pr")
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
@@ -283,10 +273,7 @@ func TestLoad_ReleaseModePR(t *testing.T) {
 }
 
 func TestLoad_ReleaseModeDefault(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -302,10 +289,7 @@ func TestLoad_ReleaseModeDefault(t *testing.T) {
 }
 
 func TestLoad_ReleaseModeInvalid(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	t.Setenv("INPUT_RELEASE_MODE", "invalid")
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
@@ -319,10 +303,7 @@ func TestLoad_ReleaseModeInvalid(t *testing.T) {
 }
 
 func TestLoad_IncludePath(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(t.TempDir())
 
 	t.Setenv("INPUT_INCLUDE-PATH", "services/python-api/**")
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
@@ -340,15 +321,15 @@ func TestLoad_IncludePath(t *testing.T) {
 
 func TestLoad_IncludePathNotInYAML(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
 	// include-path in .release.yml should be rejected as unknown field.
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: semver
 include-path: "services/api/**"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN", "INPUT_INCLUDE-PATH", "INPUT_INCLUDE_PATH"} {
 		t.Setenv(k, "")
@@ -362,14 +343,14 @@ include-path: "services/api/**"
 
 func TestLoad_ReleaseModeFromFile(t *testing.T) {
 	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	t.Chdir(dir)
 
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: semver
 release-mode: pr
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
