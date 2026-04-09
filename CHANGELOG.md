@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/DND-IT/action-releaser/compare/v0.1.7...v0.1.8) (2026-04-09)
+
+
+### Features
+
+* pin action.yaml image to versioned GHCR tag ([#8](https://github.com/DND-IT/action-releaser/issues/8)) ([0df573f](https://github.com/DND-IT/action-releaser/commit/0df573f8907ba150270cf9c768bd31dc286d4207))
+
 ## [0.1.7](https://github.com/DND-IT/action-releaser/compare/v0.1.6...v0.1.7) (2026-04-07)
 
 
