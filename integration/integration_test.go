@@ -70,22 +70,48 @@ func tag(t *testing.T, dir, name string) {
 	run(t, dir, "git", "tag", "-a", name, "-m", name)
 }
 
+// buildEnv returns os.Environ() with the given key=value overrides applied,
+// removing any pre-existing entries for those keys so our values take effect.
+// This is necessary because getenv() returns the FIRST match in the env slice,
+// so simply appending would leave CI-set vars (e.g. GITHUB_OUTPUT) in control.
+func buildEnv(overrides map[string]string) []string {
+	keys := make(map[string]bool, len(overrides))
+	for k := range overrides {
+		keys[k] = true
+	}
+	var base []string
+	for _, kv := range os.Environ() {
+		if idx := strings.Index(kv, "="); idx > 0 && keys[kv[:idx]] {
+			continue // will be replaced by our override
+		}
+		base = append(base, kv)
+	}
+	for k, v := range overrides {
+		base = append(base, k+"="+v)
+	}
+	return base
+}
+
 // runReleaser runs the binary in the given dir with env vars, returns stdout+stderr.
 func runReleaser(t *testing.T, dir string, env map[string]string) (string, error) {
 	t.Helper()
 	outputFile := filepath.Join(t.TempDir(), "github-output")
-	os.WriteFile(outputFile, nil, 0644)
+	if err := os.WriteFile(outputFile, nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	overrides := map[string]string{
+		"GITHUB_OUTPUT":      outputFile,
+		"CLIFF_TEMPLATES_DIR": filepath.Join(repoRoot(t), "cliff-templates"),
+	}
+	for k, v := range env {
+		overrides[k] = v
+	}
 
 	bin := binary(t)
 	cmd := exec.Command(bin)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GITHUB_OUTPUT="+outputFile,
-		"CLIFF_TEMPLATES_DIR="+filepath.Join(repoRoot(t), "cliff-templates"),
-	)
-	for k, v := range env {
-		cmd.Env = append(cmd.Env, k+"="+v)
-	}
+	cmd.Env = buildEnv(overrides)
 
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -94,20 +120,27 @@ func runReleaser(t *testing.T, dir string, env map[string]string) (string, error
 func readOutput(t *testing.T, dir string, env map[string]string) map[string]string {
 	t.Helper()
 	outputFile := filepath.Join(t.TempDir(), "github-output")
-	os.WriteFile(outputFile, nil, 0644)
+	if err := os.WriteFile(outputFile, nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	overrides := map[string]string{
+		"GITHUB_OUTPUT":      outputFile,
+		"CLIFF_TEMPLATES_DIR": filepath.Join(repoRoot(t), "cliff-templates"),
+	}
+	for k, v := range env {
+		overrides[k] = v
+	}
 
 	bin := binary(t)
 	cmd := exec.Command(bin)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GITHUB_OUTPUT="+outputFile,
-		"CLIFF_TEMPLATES_DIR="+filepath.Join(repoRoot(t), "cliff-templates"),
-	)
-	for k, v := range env {
-		cmd.Env = append(cmd.Env, k+"="+v)
-	}
+	cmd.Env = buildEnv(overrides)
 
-	cmd.CombinedOutput() // ignore error — we read outputs regardless
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Logf("binary stderr/stdout:\n%s", out)
+	}
 
 	data, err := os.ReadFile(outputFile)
 	if err != nil {
@@ -289,10 +322,12 @@ func TestShallowClone(t *testing.T) {
 
 func TestConfigFile(t *testing.T) {
 	dir := setupRepo(t)
-	os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
 version-strategy: numeric-rolling
 tag-prefix: "build-"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 	commit(t, dir, "init")
 
 	outputs := readOutput(t, dir, map[string]string{
