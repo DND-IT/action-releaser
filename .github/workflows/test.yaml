@@ -71,7 +71,7 @@ jobs:
           VERSION=${LATEST#v}
           URL="https://github.com/orhun/git-cliff/releases/download/${LATEST}/git-cliff-${VERSION}-x86_64-unknown-linux-musl.tar.gz"
           curl -sSL "$URL" | tar -xz
-          sudo mv "git-cliff-${VERSION}-x86_64-unknown-linux-musl/git-cliff" /usr/local/bin/git-cliff
+          sudo install -m755 "$(find . -name 'git-cliff' -type f | head -1)" /usr/local/bin/git-cliff
           git-cliff --version
 
       - name: build binary
