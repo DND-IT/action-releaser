@@ -188,7 +188,6 @@ func createOrUpdateReleasePR(cfg config.Config, version, tag, cl string) error {
 	return setOutputs(actionOutputs{
 		version:         version,
 		changelog:       cl,
-		releaseURL:      prURL,
 		prURL:           prURL,
 		releasePRNumber: prNumber,
 	})
