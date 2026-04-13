@@ -61,14 +61,14 @@ func ReleaseBranchName(tag, version string) string {
 // CreateOrUpdate creates a new release PR or updates an existing one.
 // The PR body contains the changelog preview. A .release-pending.json
 // manifest is committed to the release branch.
-// Returns the PR URL and PR number.
-func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch string) (prURL string, prNumber int, err error) {
+// Returns the PR URL, PR number, and whether the PR was newly created (vs updated).
+func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch string) (prURL string, prNumber int, created bool, err error) {
 	branchName := ReleaseBranchName(tag, version)
 
 	// Search for existing release PR by label and branch.
 	existing, err := c.findPendingPR(ctx, branchName)
 	if err != nil {
-		return "", 0, fmt.Errorf("search release PRs: %w", err)
+		return "", 0, false, fmt.Errorf("search release PRs: %w", err)
 	}
 
 	manifest := Manifest{
@@ -83,7 +83,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 
 		// Force-update the release branch to current HEAD.
 		if err := c.updateReleaseBranch(ctx, branchName, baseBranch, manifestJSON); err != nil {
-			return "", 0, fmt.Errorf("update release branch: %w", err)
+			return "", 0, false, fmt.Errorf("update release branch: %w", err)
 		}
 
 		// Update PR title and body.
@@ -94,16 +94,16 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 			Body:  github.Ptr(body),
 		})
 		if err != nil {
-			return "", 0, fmt.Errorf("update PR #%d: %w", existing.GetNumber(), err)
+			return "", 0, false, fmt.Errorf("update PR #%d: %w", existing.GetNumber(), err)
 		}
 		log.Printf("release PR #%d updated", existing.GetNumber())
-		return existing.GetHTMLURL(), existing.GetNumber(), nil
+		return existing.GetHTMLURL(), existing.GetNumber(), false, nil
 	}
 
 	// No existing PR — create release branch and PR.
 	log.Printf("creating release branch %s", branchName)
 	if err := c.createReleaseBranch(ctx, branchName, baseBranch, manifestJSON); err != nil {
-		return "", 0, fmt.Errorf("create release branch: %w", err)
+		return "", 0, false, fmt.Errorf("create release branch: %w", err)
 	}
 
 	title := fmt.Sprintf("chore: release %s", tag)
@@ -116,7 +116,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 		Base:  github.Ptr(baseBranch),
 	})
 	if err != nil {
-		return "", 0, fmt.Errorf("create PR: %w", err)
+		return "", 0, false, fmt.Errorf("create PR: %w", err)
 	}
 
 	// Add pending label.
@@ -129,7 +129,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 	}
 
 	log.Printf("release PR #%d created: %s", pr.GetNumber(), pr.GetHTMLURL())
-	return pr.GetHTMLURL(), pr.GetNumber(), nil
+	return pr.GetHTMLURL(), pr.GetNumber(), true, nil
 }
 
 // DetectMerge checks if the current event is a release PR merge.

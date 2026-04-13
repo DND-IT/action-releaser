@@ -63,6 +63,10 @@ outputs:
     description: 'URL of the open release PR (only set in pr mode while the PR is pending merge)'
   release-pr-number:
     description: 'Number of the open release PR (only set in pr mode while the PR is pending merge)'
+  release-mode:
+    description: 'Active release mode: "direct" or "pr". Echoes the release-mode input so downstream jobs can branch without re-reading inputs.'
+  pr-created:
+    description: 'true when a new release PR was opened in this run; false when an existing PR was updated. Only meaningful in pr mode.'
 
 runs:
   using: 'docker'
