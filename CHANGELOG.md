@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/DND-IT/action-releaser/compare/v0.1.8...v0.1.9) (2026-04-13)
+
+
+### Bug Fixes
+
+* use --unreleased flag for git-cliff in PR release mode ([b0f0afb](https://github.com/DND-IT/action-releaser/commit/b0f0afbe0d8182f0a350f1237b489511e62ed875))
+
 ## [0.1.8](https://github.com/DND-IT/action-releaser/compare/v0.1.7...v0.1.8) (2026-04-09)
 
 
