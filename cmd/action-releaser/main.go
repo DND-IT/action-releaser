@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/google/go-github/v68/github"
 
@@ -134,7 +135,7 @@ func processPackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 
 	if result.Skipped {
 		log.Printf("skipped: no release needed")
-		return setOutputs("", "", "", "", "", result.PreviousVersion, true, cfg.DryRun)
+		return setOutputs(actionOutputs{previousVersion: result.PreviousVersion, skipped: true, dryRun: cfg.DryRun})
 	}
 
 	tag := cfg.TagPrefix + result.Version
@@ -153,7 +154,7 @@ func processPackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 	// Dry-run: output version and changelog, skip tag/release.
 	if cfg.DryRun {
 		log.Printf("dry-run: skipping tag creation and release")
-		return setOutputs(result.Version, cl, "", "", "", result.PreviousVersion, false, true)
+		return setOutputs(actionOutputs{version: result.Version, changelog: cl, previousVersion: result.PreviousVersion, dryRun: true})
 	}
 
 	// Release PR mode: create/update PR instead of releasing directly.
@@ -179,12 +180,18 @@ func createOrUpdateReleasePR(cfg config.Config, version, tag, cl string) error {
 		baseBranch = "main"
 	}
 
-	prURL, err := client.CreateOrUpdate(context.Background(), version, tag, cl, baseBranch)
+	prURL, prNumber, err := client.CreateOrUpdate(context.Background(), version, tag, cl, baseBranch)
 	if err != nil {
 		return fmt.Errorf("create/update release PR: %w", err)
 	}
 
-	return setOutputs(version, cl, "", prURL, "", "", false, false)
+	return setOutputs(actionOutputs{
+		version:         version,
+		changelog:       cl,
+		releaseURL:      prURL,
+		prURL:           prURL,
+		releasePRNumber: prNumber,
+	})
 }
 
 func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error {
@@ -274,7 +281,13 @@ func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error
 		prClient.Cleanup(context.Background(), prNumber, branchName)
 	}
 
-	return setOutputs(version, cl, res.Tag, res.URL, "", "", false, false)
+	return setOutputs(actionOutputs{
+		version:          version,
+		changelog:        cl,
+		tag:              res.Tag,
+		releaseURL:       res.URL,
+		releasePublished: true,
+	})
 }
 
 func directRelease(cfg config.Config, result strategy.Result, tag, cl string, pkg config.Package) error {
@@ -322,19 +335,47 @@ func directRelease(cfg config.Config, result strategy.Result, tag, cl string, pk
 	}
 	log.Printf("release created: %s", res.URL)
 
-	return setOutputs(result.Version, cl, res.Tag, res.URL, "", result.PreviousVersion, false, false)
+	return setOutputs(actionOutputs{
+		version:          result.Version,
+		changelog:        cl,
+		tag:              res.Tag,
+		releaseURL:       res.URL,
+		previousVersion:  result.PreviousVersion,
+		releasePublished: true,
+	})
 }
 
-func setOutputs(version, changelogText, tag, releaseURL, prURL, previousVersion string, skipped, dryRun bool) error {
+// actionOutputs holds all GitHub Actions output values for a single run.
+type actionOutputs struct {
+	version          string
+	changelog        string
+	tag              string
+	releaseURL       string
+	prURL            string
+	previousVersion  string
+	skipped          bool
+	dryRun           bool
+	releasePublished bool // true when a GitHub Release was actually created
+	releasePRNumber  int  // non-zero when a release PR is open
+}
+
+func setOutputs(o actionOutputs) error {
+	prNumberStr := ""
+	if o.releasePRNumber > 0 {
+		prNumberStr = strconv.Itoa(o.releasePRNumber)
+	}
 	pairs := []struct{ name, value string }{
-		{"version", version},
-		{"changelog", changelogText},
-		{"tag", tag},
-		{"release-url", releaseURL},
-		{"pr-url", prURL},
-		{"previous-version", previousVersion},
-		{"skipped", boolStr(skipped)},
-		{"dry-run", boolStr(dryRun)},
+		{"version", o.version},
+		{"changelog", o.changelog},
+		{"tag", o.tag},
+		{"release-url", o.releaseURL},
+		{"pr-url", o.prURL},
+		{"previous-version", o.previousVersion},
+		{"skipped", boolStr(o.skipped)},
+		{"dry-run", boolStr(o.dryRun)},
+		{"release-published", boolStr(o.releasePublished)},
+		{"release-pr-url", o.prURL},
+		{"release-pr-number", prNumberStr},
 	}
 	for _, p := range pairs {
 		if err := output.Set(p.name, p.value); err != nil {

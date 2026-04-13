@@ -48,15 +48,21 @@ outputs:
   tag:
     description: 'Created git tag (empty if skipped or dry-run)'
   release-url:
-    description: 'GitHub release URL (empty if skipped or dry-run)'
+    description: 'GitHub release URL in direct mode, or release PR URL in pr mode (empty if skipped or dry-run)'
   previous-version:
     description: 'Previous version tag (empty on first release)'
   skipped:
     description: 'true if no release was created, false otherwise'
   pr-url:
-    description: 'Release PR URL (only in pr mode)'
+    description: 'Release PR URL (only in pr mode, same as release-pr-url)'
   dry-run:
     description: 'true if dry-run mode was active'
+  release-published:
+    description: 'true when a GitHub Release was actually created (direct mode or after gated PR merge)'
+  release-pr-url:
+    description: 'URL of the open release PR (only set in pr mode while the PR is pending merge)'
+  release-pr-number:
+    description: 'Number of the open release PR (only set in pr mode while the PR is pending merge)'
 
 runs:
   using: 'docker'

@@ -61,13 +61,14 @@ func ReleaseBranchName(tag, version string) string {
 // CreateOrUpdate creates a new release PR or updates an existing one.
 // The PR body contains the changelog preview. A .release-pending.json
 // manifest is committed to the release branch.
-func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch string) (prURL string, err error) {
+// Returns the PR URL and PR number.
+func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch string) (prURL string, prNumber int, err error) {
 	branchName := ReleaseBranchName(tag, version)
 
 	// Search for existing release PR by label and branch.
 	existing, err := c.findPendingPR(ctx, branchName)
 	if err != nil {
-		return "", fmt.Errorf("search release PRs: %w", err)
+		return "", 0, fmt.Errorf("search release PRs: %w", err)
 	}
 
 	manifest := Manifest{
@@ -82,7 +83,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 
 		// Force-update the release branch to current HEAD.
 		if err := c.updateReleaseBranch(ctx, branchName, baseBranch, manifestJSON); err != nil {
-			return "", fmt.Errorf("update release branch: %w", err)
+			return "", 0, fmt.Errorf("update release branch: %w", err)
 		}
 
 		// Update PR title and body.
@@ -93,16 +94,16 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 			Body:  github.Ptr(body),
 		})
 		if err != nil {
-			return "", fmt.Errorf("update PR #%d: %w", existing.GetNumber(), err)
+			return "", 0, fmt.Errorf("update PR #%d: %w", existing.GetNumber(), err)
 		}
 		log.Printf("release PR #%d updated", existing.GetNumber())
-		return existing.GetHTMLURL(), nil
+		return existing.GetHTMLURL(), existing.GetNumber(), nil
 	}
 
 	// No existing PR — create release branch and PR.
 	log.Printf("creating release branch %s", branchName)
 	if err := c.createReleaseBranch(ctx, branchName, baseBranch, manifestJSON); err != nil {
-		return "", fmt.Errorf("create release branch: %w", err)
+		return "", 0, fmt.Errorf("create release branch: %w", err)
 	}
 
 	title := fmt.Sprintf("chore: release %s", tag)
@@ -115,7 +116,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 		Base:  github.Ptr(baseBranch),
 	})
 	if err != nil {
-		return "", fmt.Errorf("create PR: %w", err)
+		return "", 0, fmt.Errorf("create PR: %w", err)
 	}
 
 	// Add pending label.
@@ -128,7 +129,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 	}
 
 	log.Printf("release PR #%d created: %s", pr.GetNumber(), pr.GetHTMLURL())
-	return pr.GetHTMLURL(), nil
+	return pr.GetHTMLURL(), pr.GetNumber(), nil
 }
 
 // DetectMerge checks if the current event is a release PR merge.
@@ -271,21 +272,22 @@ func (c *Client) createReleaseBranch(ctx context.Context, branchName, baseBranch
 }
 
 func (c *Client) updateReleaseBranch(ctx context.Context, branchName, baseBranch string, manifestJSON []byte) error {
-	// Force-update the branch to match the base.
+	// Force-update the branch to match the base without deleting it first.
+	// Deleting the branch would cause GitHub to auto-close any open PR whose
+	// head is that branch, even if a new branch with the same name is pushed
+	// moments later. A force UpdateRef avoids the deletion and keeps the PR open.
 	baseRef, _, err := c.gh.Git.GetRef(ctx, c.owner, c.repo, "refs/heads/"+baseBranch)
 	if err != nil {
 		return fmt.Errorf("get base ref %s: %w", baseBranch, err)
 	}
 	baseSHA := baseRef.GetObject().GetSHA()
 
-	// Delete and recreate to force-update.
-	c.gh.Git.DeleteRef(ctx, c.owner, c.repo, "refs/heads/"+branchName) //nolint:errcheck
-	_, _, err = c.gh.Git.CreateRef(ctx, c.owner, c.repo, &github.Reference{
+	_, _, err = c.gh.Git.UpdateRef(ctx, c.owner, c.repo, &github.Reference{
 		Ref:    github.Ptr("refs/heads/" + branchName),
 		Object: &github.GitObject{SHA: github.Ptr(baseSHA)},
-	})
+	}, true)
 	if err != nil {
-		return fmt.Errorf("recreate branch %s: %w", branchName, err)
+		return fmt.Errorf("force-update branch %s: %w", branchName, err)
 	}
 
 	return c.commitManifest(ctx, branchName, manifestJSON)
