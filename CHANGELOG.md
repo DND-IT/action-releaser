@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.10](https://github.com/DND-IT/action-releaser/compare/v0.1.9...v0.1.10) (2026-04-13)
+
+
+### Features
+
+* add release-mode, pr-created, and tag-in-pr-mode outputs ([17cd822](https://github.com/DND-IT/action-releaser/commit/17cd822f2c8b37bf1cf9bfca5e5be23556985e7b))
+* split release-url semantics and add structured PR outputs ([3435695](https://github.com/DND-IT/action-releaser/commit/343569559642d251a10856e01409db86b106b093))
+
+
+### Bug Fixes
+
+* **releasepr:** force-push branch on update to avoid closing open PR ([74a2b4b](https://github.com/DND-IT/action-releaser/commit/74a2b4ba1ba707e9f8fb78d6233f26fd83970f35))
+
 ## [0.1.9](https://github.com/DND-IT/action-releaser/compare/v0.1.8...v0.1.9) (2026-04-13)
 
 
