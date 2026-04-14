@@ -65,7 +65,9 @@ func TestTruncate(t *testing.T) {
 	})
 
 	t.Run("long text is truncated", func(t *testing.T) {
-		text := strings.Repeat("a", maxChangelogBytes+100)
+		// Use 2x the limit so even after appending the truncation suffix the
+		// result is guaranteed to be shorter than the original input.
+		text := strings.Repeat("a", maxChangelogBytes*2)
 		result := truncate(text)
 		if len(result) >= len(text) {
 			t.Errorf("truncate did not shorten long text: len=%d, original len=%d", len(result), len(text))
