@@ -22,7 +22,7 @@ type VersionStrategy interface {
 	NextVersion(tags []string, cfg config.Config) (Result, error)
 
 	// AlwaysReleases returns true if this strategy always produces a release
-	// (date-rolling, numeric-rolling) vs. conditionally (semver).
+	// (calver) vs. conditionally (semver).
 	AlwaysReleases() bool
 
 	// Name returns the strategy name for logging.
@@ -34,20 +34,17 @@ func New(name string) (VersionStrategy, error) {
 	switch name {
 	case "semver":
 		return &Semver{}, nil
-	case "date-rolling":
-		return &DateRolling{}, nil
-	case "numeric-rolling":
-		return &NumericRolling{}, nil
+	case "calver":
+		return &CalVer{}, nil
 	default:
-		return nil, fmt.Errorf("unknown strategy %q: use semver, date-rolling, or numeric-rolling", name)
+		return nil, fmt.Errorf("unknown strategy %q: use semver or calver", name)
 	}
 }
 
 // Version format regexes — used to validate the version part after stripping the tag prefix.
 var (
-	semverVersionRe  = regexp.MustCompile(`^\d+\.\d+\.\d+`)
-	dateVersionRe    = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
-	numericVersionRe = regexp.MustCompile(`^\d+$`)
+	semverVersionRe = regexp.MustCompile(`^\d+\.\d+\.\d+`)
+	dateVersionRe   = regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
 )
 
 // IsValidVersion checks whether a version string (prefix already stripped)
@@ -56,10 +53,8 @@ func IsValidVersion(strategyName, version string) bool {
 	switch strategyName {
 	case "semver":
 		return semverVersionRe.MatchString(version)
-	case "date-rolling":
+	case "calver":
 		return dateVersionRe.MatchString(version)
-	case "numeric-rolling":
-		return numericVersionRe.MatchString(version)
 	default:
 		return false
 	}
@@ -91,10 +86,8 @@ func TagPatternRegex(prefix, strategyName string) string {
 	switch strategyName {
 	case "semver":
 		return escaped + `\d+\.\d+\.\d+`
-	case "date-rolling":
+	case "calver":
 		return escaped + `\d{4}\.\d{2}\.\d{2}`
-	case "numeric-rolling":
-		return escaped + `\d+$`
 	default:
 		return escaped + `.*`
 	}

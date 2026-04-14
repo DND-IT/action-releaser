@@ -6,7 +6,7 @@ Supports multiple versioning strategies, monorepo releases, and per-repo configu
 
 ## Features
 
-- **3 versioning strategies:** semver (conventional commits), date-rolling (`2026.03.27`), numeric-rolling (`1`, `2`, `3`)
+- **2 versioning strategies:** semver (conventional commits), calver (`2026.03.27`)
 - **Two release modes:** `direct` (tag + release on every push) or `pr` (open a release PR, release on merge)
 - **Monorepo support:** release each package independently with path-based filtering
 - **Dry-run mode:** preview the next version and changelog without creating a release
@@ -62,32 +62,18 @@ Parses [conventional commits](https://www.conventionalcommits.org/) to determine
 - No conventional commits since last tag → skip (no release)
 - First release (no tags) → `0.1.0`
 
-### Date-rolling
+### CalVer
 
-Version is the current UTC date. Multiple releases per day get a suffix.
+Version is the current UTC date (`YYYY.MM.DD`). Multiple releases per day get a numeric suffix.
 
 ```yaml
 - uses: dnd-it/action-releaser@v0
   with:
-    version-strategy: date-rolling
+    version-strategy: calver
 ```
 
 - First release of the day → `2026.03.27`
 - Second release same day → `2026.03.27.2`
-- Always releases (no commit-type gating)
-
-### Numeric-rolling
-
-Simple incrementing number.
-
-```yaml
-- uses: dnd-it/action-releaser@v0
-  with:
-    version-strategy: numeric-rolling
-```
-
-- Increments the highest numeric tag by 1
-- First release → `1`
 - Always releases (no commit-type gating)
 
 ## Release Modes
@@ -152,7 +138,7 @@ jobs:
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `version-strategy` | `semver`, `date-rolling`, or `numeric-rolling` | `semver` |
+| `version-strategy` | `semver` or `calver` | `semver` |
 | `release-mode` | `direct` (release immediately) or `pr` (open release PR, release on merge) | `direct` |
 | `tag-prefix` | Prefix for git tags (e.g. `v`, `release-`) | `""` |
 | `include-path` | Glob to scope commits by file path (e.g. `services/api/**`). Used in monorepos to ensure only commits touching this path affect version calculation and changelog. | `""` |

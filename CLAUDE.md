@@ -18,7 +18,7 @@ go test -v -race ./...
 ## Architecture
 
 - `cmd/action-releaser/` — CLI entrypoint
-- `internal/strategy/` — VersionStrategy interface + semver, date-rolling, numeric-rolling
+- `internal/strategy/` — VersionStrategy interface + semver, calver
 - `internal/release/` — GitHub release creation via go-github SDK
 - `internal/changelog/` — git-cliff changelog generation
 - `internal/config/` — .release.yml parsing + action input merging

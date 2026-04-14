@@ -4,7 +4,7 @@ author: 'group:default/dai'
 
 inputs:
   version-strategy:
-    description: 'Versioning strategy: semver, date-rolling, or numeric-rolling'
+    description: 'Versioning strategy: semver or calver'
     required: false
     default: 'semver'
   cliff-config:

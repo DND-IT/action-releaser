@@ -120,10 +120,10 @@ func Load() (Config, error) {
 
 	// Validate strategy.
 	switch cfg.VersionStrategy {
-	case "semver", "date-rolling", "numeric-rolling":
+	case "semver", "calver":
 		// ok
 	default:
-		return Config{}, fmt.Errorf("unknown version-strategy %q: use semver, date-rolling, or numeric-rolling", cfg.VersionStrategy)
+		return Config{}, fmt.Errorf("unknown version-strategy %q: use semver or calver", cfg.VersionStrategy)
 	}
 
 	// Validate release mode.

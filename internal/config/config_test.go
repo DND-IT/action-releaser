@@ -39,7 +39,7 @@ func TestLoad_WithFile(t *testing.T) {
 	t.Chdir(dir)
 
 	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
-version-strategy: date-rolling
+version-strategy: calver
 tag-prefix: "release-"
 draft: true
 `), 0644); err != nil {
@@ -54,8 +54,8 @@ draft: true
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.VersionStrategy != "date-rolling" {
-		t.Errorf("strategy = %q, want date-rolling", cfg.VersionStrategy)
+	if cfg.VersionStrategy != "calver" {
+		t.Errorf("strategy = %q, want calver", cfg.VersionStrategy)
 	}
 	if cfg.TagPrefix != "release-" {
 		t.Errorf("prefix = %q, want release-", cfg.TagPrefix)
@@ -70,7 +70,7 @@ func TestLoad_WithYAMLExtension(t *testing.T) {
 	t.Chdir(dir)
 
 	if err := os.WriteFile(filepath.Join(dir, ".release.yaml"), []byte(`
-version-strategy: date-rolling
+version-strategy: calver
 tag-prefix: "deploy-"
 `), 0644); err != nil {
 		t.Fatal(err)
@@ -84,8 +84,8 @@ tag-prefix: "deploy-"
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.VersionStrategy != "date-rolling" {
-		t.Errorf("strategy = %q, want date-rolling", cfg.VersionStrategy)
+	if cfg.VersionStrategy != "calver" {
+		t.Errorf("strategy = %q, want calver", cfg.VersionStrategy)
 	}
 	if cfg.TagPrefix != "deploy-" {
 		t.Errorf("prefix = %q, want deploy-", cfg.TagPrefix)
@@ -125,13 +125,13 @@ func TestLoad_EnvOverridesFile(t *testing.T) {
 	t.Chdir(dir)
 
 	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
-version-strategy: date-rolling
+version-strategy: calver
 tag-prefix: "release-"
 `), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	t.Setenv("INPUT_VERSION_STRATEGY", "numeric-rolling")
+	t.Setenv("INPUT_VERSION_STRATEGY", "calver")
 	t.Setenv("INPUT_TAG_PREFIX", "build-")
 	for _, k := range []string{"INPUT_CLIFF_CONFIG", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		t.Setenv(k, "")
@@ -141,8 +141,8 @@ tag-prefix: "release-"
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.VersionStrategy != "numeric-rolling" {
-		t.Errorf("strategy = %q, want numeric-rolling (env override)", cfg.VersionStrategy)
+	if cfg.VersionStrategy != "calver" {
+		t.Errorf("strategy = %q, want calver (env override)", cfg.VersionStrategy)
 	}
 	if cfg.TagPrefix != "build-" {
 		t.Errorf("prefix = %q, want build- (env override)", cfg.TagPrefix)

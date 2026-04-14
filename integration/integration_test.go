@@ -197,12 +197,12 @@ func TestSemverRelease(t *testing.T) {
 	}
 }
 
-func TestDateRollingRelease(t *testing.T) {
+func TestCalVerRelease(t *testing.T) {
 	dir := setupRepo(t)
 	commit(t, dir, "some work")
 
 	outputs := readOutput(t, dir, map[string]string{
-		"INPUT_VERSION_STRATEGY": "date-rolling",
+		"INPUT_VERSION_STRATEGY": "calver",
 		"INPUT_TAG_PREFIX":       "v",
 		"INPUT_DRY_RUN":          "true",
 	})
@@ -212,26 +212,6 @@ func TestDateRollingRelease(t *testing.T) {
 	}
 	if !strings.Contains(outputs["version"], ".") {
 		t.Errorf("expected date format YYYY.MM.DD, got %q", outputs["version"])
-	}
-}
-
-func TestNumericRollingRelease(t *testing.T) {
-	dir := setupRepo(t)
-	commit(t, dir, "init")
-	tag(t, dir, "v1")
-	commit(t, dir, "more work")
-
-	outputs := readOutput(t, dir, map[string]string{
-		"INPUT_VERSION_STRATEGY": "numeric-rolling",
-		"INPUT_TAG_PREFIX":       "v",
-		"INPUT_DRY_RUN":          "true",
-	})
-
-	if outputs["version"] != "2" {
-		t.Errorf("version = %q, want 2", outputs["version"])
-	}
-	if outputs["previous-version"] != "v1" {
-		t.Errorf("previous-version = %q, want v1", outputs["previous-version"])
 	}
 }
 
@@ -323,7 +303,7 @@ func TestShallowClone(t *testing.T) {
 func TestConfigFile(t *testing.T) {
 	dir := setupRepo(t)
 	if err := os.WriteFile(filepath.Join(dir, ".release.yml"), []byte(`
-version-strategy: numeric-rolling
+version-strategy: calver
 tag-prefix: "build-"
 `), 0644); err != nil {
 		t.Fatal(err)
@@ -334,7 +314,7 @@ tag-prefix: "build-"
 		"INPUT_DRY_RUN": "true",
 	})
 
-	if outputs["version"] != "1" {
-		t.Errorf("version = %q, want 1 (numeric-rolling from config)", outputs["version"])
+	if !strings.Contains(outputs["version"], ".") {
+		t.Errorf("version = %q, want YYYY.MM.DD format (calver from config)", outputs["version"])
 	}
 }
