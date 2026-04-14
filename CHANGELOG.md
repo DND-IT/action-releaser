@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/DND-IT/action-releaser/compare/v0.1.10...v0.2.0) (2026-04-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* version-strategy no longer accepts "date-rolling" or "numeric-rolling". Use "calver" (calendar versioning, YYYY.MM.DD[.N]) instead of "date-rolling". Numeric-rolling has no replacement.
+
+### Features
+
+* replace date-rolling/numeric-rolling with calver, drop numeric-rolling ([4a316f8](https://github.com/DND-IT/action-releaser/commit/4a316f8eaae2c82002704210f7581532e0e8e547))
+
+
+### Bug Fixes
+
+* **test:** correct truncate assertion to compare against input length not byte constant ([7ad9908](https://github.com/DND-IT/action-releaser/commit/7ad990825b7cef130b6d386a15362d4b0807c718))
+
 ## [0.1.10](https://github.com/DND-IT/action-releaser/compare/v0.1.9...v0.1.10) (2026-04-13)
 
 
