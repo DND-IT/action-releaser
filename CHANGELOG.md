@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/DND-IT/action-releaser/compare/v0.2.0...v0.2.1) (2026-04-14)
+
+
+### Bug Fixes
+
+* **test:** use 2x input size so truncated+suffix is always shorter than original ([bed71f9](https://github.com/DND-IT/action-releaser/commit/bed71f99d6c497f0177e553177a456aa9f64f94f))
+
 ## [0.2.0](https://github.com/DND-IT/action-releaser/compare/v0.1.10...v0.2.0) (2026-04-14)
 
 
