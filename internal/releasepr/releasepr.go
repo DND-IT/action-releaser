@@ -170,7 +170,11 @@ func (c *Client) DetectMerge(ctx context.Context, baseBranch string) (*MergeResu
 	}
 
 	for _, pr := range prs {
-		if !pr.GetMerged() {
+		// The "List PRs" endpoint does NOT populate the boolean `merged`
+		// field — that only appears on the single-PR GET endpoint. We must
+		// derive merged-ness from `merged_at` instead, otherwise every PR
+		// looks unmerged and DetectMerge silently returns nil.
+		if pr.MergedAt == nil {
 			continue
 		}
 		if !strings.HasPrefix(pr.GetHead().GetRef(), BranchPrefix) {

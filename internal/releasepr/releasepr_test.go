@@ -187,17 +187,23 @@ func newTestClient(t *testing.T, mux *http.ServeMux) (*Client, func()) {
 }
 
 // prFixture builds a minimal JSON object for a PR list entry.
+// Mirrors the real "List PRs" API response shape: it sets `merged_at` (not
+// the boolean `merged`, which is only present on the single-PR GET endpoint).
+// Tests that use the LIST endpoint must rely on `merged_at` to detect merges.
 func prFixture(number int, merged bool, headRef string, labels ...string) map[string]any {
 	lbls := make([]map[string]string, 0, len(labels))
 	for _, l := range labels {
 		lbls = append(lbls, map[string]string{"name": l})
 	}
-	return map[string]any{
+	pr := map[string]any{
 		"number": number,
-		"merged": merged,
 		"head":   map[string]any{"ref": headRef},
 		"labels": lbls,
 	}
+	if merged {
+		pr["merged_at"] = "2026-04-17T12:00:00Z"
+	}
+	return pr
 }
 
 func TestDetectMerge_EmptyList(t *testing.T) {
