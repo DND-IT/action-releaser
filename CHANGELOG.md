@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/DND-IT/action-releaser/compare/v0.2.2...v0.2.3) (2026-04-17)
+
+
+### Bug Fixes
+
+* detect merged PRs via merged_at, not the boolean merged field ([441c23c](https://github.com/DND-IT/action-releaser/commit/441c23c6fb9c888e783da5a99afbfa92b0695162))
+
 ## [0.2.2](https://github.com/DND-IT/action-releaser/compare/v0.2.1...v0.2.2) (2026-04-17)
 
 
