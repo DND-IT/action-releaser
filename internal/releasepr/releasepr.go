@@ -2,8 +2,8 @@
 // create/update a release PR on push, detect merge and trigger release.
 //
 // Flow:
-//   push to main → CreateOrUpdate() → release PR with changelog in body
-//   PR merged    → DetectMerge()    → returns manifest for release creation
+//   push to main → CreateOrUpdate() → release PR with changelog + manifest
+//   push to main → DetectMerge()    → finds merged PR via API, returns manifest
 //   post-release → Cleanup()        → swap labels, delete branch
 package releasepr
 
@@ -12,17 +12,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/google/go-github/v68/github"
 )
 
 const (
-	LabelPending = "autorelease: pending"
-	LabelTagged  = "autorelease: tagged"
-	BranchPrefix = "release/"
-	ManifestFile = ".release-pending.json"
+	LabelPending  = "autorelease: pending"
+	LabelTagged   = "autorelease: tagged"
+	BranchPrefix  = "release/"
+	ManifestFile  = ".release-pending.json"
+	ChangelogFile = "CHANGELOG.md"
 )
 
 // Manifest is the JSON payload committed to the release branch.
@@ -30,6 +33,12 @@ type Manifest struct {
 	Version  string `json:"version"`
 	Strategy string `json:"strategy"`
 	Tag      string `json:"tag"`
+}
+
+// MergeResult holds the result of a merged release PR detection.
+type MergeResult struct {
+	Manifest *Manifest
+	PRNumber int
 }
 
 // Client wraps go-github for release PR operations.
@@ -58,11 +67,22 @@ func ReleaseBranchName(tag, version string) string {
 	return BranchPrefix + name
 }
 
+// ChangelogPath returns the path for the changelog file.
+// When servicePath is set, places it under the service directory so the
+// merge commit triggers path-filtered workflows.
+func ChangelogPath(servicePath string) string {
+	if servicePath == "" {
+		return ChangelogFile
+	}
+	return path.Join(servicePath, ChangelogFile)
+}
+
 // CreateOrUpdate creates a new release PR or updates an existing one.
-// The PR body contains the changelog preview. A .release-pending.json
-// manifest is committed to the release branch.
+// A .release-pending.json manifest and CHANGELOG.md are committed to the
+// release branch. The CHANGELOG.md is placed under servicePath (if set) so
+// that merging the PR triggers path-filtered workflows.
 // Returns the PR URL, PR number, and whether the PR was newly created (vs updated).
-func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch string) (prURL string, prNumber int, created bool, err error) {
+func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, baseBranch, servicePath string) (prURL string, prNumber int, created bool, err error) {
 	branchName := ReleaseBranchName(tag, version)
 
 	// Search for existing release PR by label and branch.
@@ -82,7 +102,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 		log.Printf("found existing release PR #%d, updating", existing.GetNumber())
 
 		// Force-update the release branch to current HEAD.
-		if err := c.updateReleaseBranch(ctx, branchName, baseBranch, manifestJSON); err != nil {
+		if err := c.updateReleaseBranch(ctx, branchName, baseBranch, manifestJSON, changelog, servicePath); err != nil {
 			return "", 0, false, fmt.Errorf("update release branch: %w", err)
 		}
 
@@ -102,7 +122,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 
 	// No existing PR — create release branch and PR.
 	log.Printf("creating release branch %s", branchName)
-	if err := c.createReleaseBranch(ctx, branchName, baseBranch, manifestJSON); err != nil {
+	if err := c.createReleaseBranch(ctx, branchName, baseBranch, manifestJSON, changelog, servicePath); err != nil {
 		return "", 0, false, fmt.Errorf("create release branch: %w", err)
 	}
 
@@ -132,74 +152,56 @@ func (c *Client) CreateOrUpdate(ctx context.Context, version, tag, changelog, ba
 	return pr.GetHTMLURL(), pr.GetNumber(), true, nil
 }
 
-// DetectMerge checks if the current event is a release PR merge.
-// Returns the manifest if it is, nil otherwise.
-func DetectMerge() (*Manifest, error) {
-	eventName := os.Getenv("GITHUB_EVENT_NAME")
-	if eventName != "pull_request" {
-		return nil, nil
-	}
-
-	eventPath := os.Getenv("GITHUB_EVENT_PATH")
-	if eventPath == "" {
-		return nil, nil
-	}
-
-	data, err := os.ReadFile(eventPath)
+// DetectMerge searches for a recently merged release PR via the GitHub API.
+// Unlike event-based detection, this works on any event type (push,
+// pull_request, workflow_dispatch) — matching how release-please operates.
+// Returns nil when no merged release PR is found.
+func (c *Client) DetectMerge(ctx context.Context, baseBranch string) (*MergeResult, error) {
+	prs, _, err := c.gh.PullRequests.List(ctx, c.owner, c.repo, &github.PullRequestListOptions{
+		State:       "closed",
+		Base:        baseBranch,
+		Sort:        "updated",
+		Direction:   "desc",
+		ListOptions: github.ListOptions{PerPage: 100},
+	})
 	if err != nil {
-		return nil, fmt.Errorf("read event file: %w", err)
+		return nil, fmt.Errorf("list closed PRs: %w", err)
 	}
 
-	var event struct {
-		Action      string `json:"action"`
-		PullRequest struct {
-			Merged bool `json:"merged"`
-			Head   struct {
-				Ref string `json:"ref"`
-			} `json:"head"`
-			Labels []struct {
-				Name string `json:"name"`
-			} `json:"labels"`
-		} `json:"pull_request"`
-	}
-	if err := json.Unmarshal(data, &event); err != nil {
-		return nil, fmt.Errorf("parse event: %w", err)
-	}
-
-	// Must be a closed+merged PR.
-	if event.Action != "closed" || !event.PullRequest.Merged {
-		return nil, nil
-	}
-
-	// Must have the pending label.
-	hasPendingLabel := false
-	for _, l := range event.PullRequest.Labels {
-		if l.Name == LabelPending {
-			hasPendingLabel = true
-			break
+	for _, pr := range prs {
+		if !pr.GetMerged() {
+			continue
 		}
-	}
-	if !hasPendingLabel {
-		return nil, nil
+		if !strings.HasPrefix(pr.GetHead().GetRef(), BranchPrefix) {
+			continue
+		}
+		hasPendingLabel := false
+		for _, l := range pr.Labels {
+			if l.GetName() == LabelPending {
+				hasPendingLabel = true
+				break
+			}
+		}
+		if !hasPendingLabel {
+			continue
+		}
+
+		log.Printf("found merged release PR #%d (branch: %s)", pr.GetNumber(), pr.GetHead().GetRef())
+
+		// Try to read manifest from the workspace (merged into the base branch).
+		manifest, err := readManifestFromWorkspace()
+		if err != nil {
+			log.Printf("warning: could not read manifest, will recalculate: %v", err)
+			manifest = &Manifest{}
+		}
+
+		return &MergeResult{
+			Manifest: manifest,
+			PRNumber: pr.GetNumber(),
+		}, nil
 	}
 
-	// Must be from a release branch.
-	if !strings.HasPrefix(event.PullRequest.Head.Ref, BranchPrefix) {
-		return nil, nil
-	}
-
-	// Try to read the manifest from the workspace.
-	manifest, err := readManifestFromWorkspace()
-	if err != nil {
-		log.Printf("warning: could not read manifest, will recalculate: %v", err)
-		// Return an empty manifest — caller will recalculate version from tags.
-		// With stable branch names (e.g. "release/go-service"), the branch name
-		// no longer encodes the full tag, so we rely on the manifest file or
-		// recalculation instead.
-		return &Manifest{}, nil
-	}
-
-	return manifest, nil
+	return nil, nil
 }
 
 // Cleanup swaps labels and deletes the release branch after a successful release.
@@ -247,7 +249,7 @@ func (c *Client) findPendingPR(ctx context.Context, branchName string) (*github.
 	return nil, nil
 }
 
-func (c *Client) createReleaseBranch(ctx context.Context, branchName, baseBranch string, manifestJSON []byte) error {
+func (c *Client) createReleaseBranch(ctx context.Context, branchName, baseBranch string, manifestJSON []byte, changelog, servicePath string) error {
 	// Get the SHA of the base branch.
 	baseRef, _, err := c.gh.Git.GetRef(ctx, c.owner, c.repo, "refs/heads/"+baseBranch)
 	if err != nil {
@@ -267,11 +269,10 @@ func (c *Client) createReleaseBranch(ctx context.Context, branchName, baseBranch
 		return fmt.Errorf("create branch %s: %w", branchName, err)
 	}
 
-	// Commit the manifest file to the release branch.
-	return c.commitManifest(ctx, branchName, manifestJSON)
+	return c.commitReleaseFiles(ctx, branchName, baseBranch, manifestJSON, changelog, servicePath)
 }
 
-func (c *Client) updateReleaseBranch(ctx context.Context, branchName, baseBranch string, manifestJSON []byte) error {
+func (c *Client) updateReleaseBranch(ctx context.Context, branchName, baseBranch string, manifestJSON []byte, changelog, servicePath string) error {
 	// Force-update the branch to match the base without deleting it first.
 	// Deleting the branch would cause GitHub to auto-close any open PR whose
 	// head is that branch, even if a new branch with the same name is pushed
@@ -290,10 +291,13 @@ func (c *Client) updateReleaseBranch(ctx context.Context, branchName, baseBranch
 		return fmt.Errorf("force-update branch %s: %w", branchName, err)
 	}
 
-	return c.commitManifest(ctx, branchName, manifestJSON)
+	return c.commitReleaseFiles(ctx, branchName, baseBranch, manifestJSON, changelog, servicePath)
 }
 
-func (c *Client) commitManifest(ctx context.Context, branchName string, manifestJSON []byte) error {
+// commitReleaseFiles commits the manifest and CHANGELOG.md to the release branch.
+// The changelog is placed under servicePath to trigger path-filtered workflows.
+// Existing CHANGELOG.md content on the base branch is preserved by prepending.
+func (c *Client) commitReleaseFiles(ctx context.Context, branchName, baseBranch string, manifestJSON []byte, changelog, servicePath string) error {
 	// Get current commit on the branch.
 	ref, _, err := c.gh.Git.GetRef(ctx, c.owner, c.repo, "refs/heads/"+branchName)
 	if err != nil {
@@ -308,23 +312,52 @@ func (c *Client) commitManifest(ctx context.Context, branchName string, manifest
 	}
 
 	// Create a blob for the manifest.
-	blob, _, err := c.gh.Git.CreateBlob(ctx, c.owner, c.repo, &github.Blob{
+	manifestBlob, _, err := c.gh.Git.CreateBlob(ctx, c.owner, c.repo, &github.Blob{
 		Content:  github.Ptr(string(manifestJSON)),
 		Encoding: github.Ptr("utf-8"),
 	})
 	if err != nil {
-		return fmt.Errorf("create blob: %w", err)
+		return fmt.Errorf("create manifest blob: %w", err)
 	}
 
-	// Create a tree with the manifest file.
-	tree, _, err := c.gh.Git.CreateTree(ctx, c.owner, c.repo, parentCommit.GetTree().GetSHA(), []*github.TreeEntry{
+	entries := []*github.TreeEntry{
 		{
 			Path: github.Ptr(ManifestFile),
 			Mode: github.Ptr("100644"),
 			Type: github.Ptr("blob"),
-			SHA:  blob.SHA,
+			SHA:  manifestBlob.SHA,
 		},
-	})
+	}
+
+	// Add CHANGELOG.md under the service path (or root).
+	if changelog != "" {
+		clPath := ChangelogPath(servicePath)
+
+		// Read existing changelog from the base branch to prepend.
+		existing, err := c.readFileContent(ctx, clPath, baseBranch)
+		if err != nil {
+			return fmt.Errorf("read existing changelog: %w", err)
+		}
+		content := PrependChangelog(changelog, existing)
+
+		clBlob, _, err := c.gh.Git.CreateBlob(ctx, c.owner, c.repo, &github.Blob{
+			Content:  github.Ptr(content),
+			Encoding: github.Ptr("utf-8"),
+		})
+		if err != nil {
+			return fmt.Errorf("create changelog blob: %w", err)
+		}
+
+		entries = append(entries, &github.TreeEntry{
+			Path: github.Ptr(clPath),
+			Mode: github.Ptr("100644"),
+			Type: github.Ptr("blob"),
+			SHA:  clBlob.SHA,
+		})
+	}
+
+	// Create a tree with all release files.
+	tree, _, err := c.gh.Git.CreateTree(ctx, c.owner, c.repo, parentCommit.GetTree().GetSHA(), entries)
 	if err != nil {
 		return fmt.Errorf("create tree: %w", err)
 	}
@@ -349,6 +382,41 @@ func (c *Client) commitManifest(ctx context.Context, branchName string, manifest
 	}
 
 	return nil
+}
+
+// readFileContent reads a file from the repo at the given ref.
+// Returns empty string (and nil error) if the file does not exist.
+// Other errors (rate limit, auth, 5xx) are propagated — callers must not
+// treat them as "file missing" since that would silently destroy data
+// when the result is used to seed file rewrites.
+func (c *Client) readFileContent(ctx context.Context, filePath, ref string) (string, error) {
+	content, _, resp, err := c.gh.Repositories.GetContents(ctx, c.owner, c.repo, filePath, &github.RepositoryContentGetOptions{Ref: ref})
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return "", nil
+		}
+		return "", err
+	}
+	if content == nil {
+		return "", nil
+	}
+	return content.GetContent()
+}
+
+// PrependChangelog prepends new changelog entries to existing content.
+// Maintains a single top-level "# Changelog" header.
+func PrependChangelog(newEntries, existing string) string {
+	if existing == "" {
+		return "# Changelog\n\n" + newEntries + "\n"
+	}
+
+	// Strip leading "# Changelog" header from existing content.
+	body := existing
+	if idx := strings.Index(body, "\n"); idx >= 0 && strings.HasPrefix(body, "# ") {
+		body = strings.TrimLeft(body[idx:], "\n")
+	}
+
+	return "# Changelog\n\n" + newEntries + "\n\n" + body
 }
 
 func (c *Client) ensureLabel(ctx context.Context, name, color string) error {

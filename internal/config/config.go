@@ -8,6 +8,25 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ServicePath returns the directory path for the current release scope.
+// For monorepo packages it returns the package path; for include-path it
+// extracts the directory prefix from the glob. Returns "" for root-level
+// (non-monorepo) releases.
+func (c Config) ServicePath() string {
+	if c.CurrentPackage != nil && c.CurrentPackage.Path != "" {
+		return c.CurrentPackage.Path
+	}
+	if c.IncludePath != "" {
+		// Strip glob suffix: "services/foo/**" → "services/foo"
+		idx := strings.IndexAny(c.IncludePath, "*?[")
+		if idx <= 0 {
+			return ""
+		}
+		return strings.TrimRight(c.IncludePath[:idx], "/")
+	}
+	return ""
+}
+
 // Config holds the merged configuration from .release.yml and action inputs.
 type Config struct {
 	VersionStrategy string    `yaml:"version-strategy"`

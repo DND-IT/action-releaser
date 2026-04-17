@@ -341,6 +341,56 @@ include-path: "services/api/**"
 	}
 }
 
+func TestServicePath(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		want string
+	}{
+		{
+			name: "no path info",
+			cfg:  Config{},
+			want: "",
+		},
+		{
+			name: "package path",
+			cfg:  Config{CurrentPackage: &Package{Path: "services/go-service"}},
+			want: "services/go-service",
+		},
+		{
+			name: "include-path glob",
+			cfg:  Config{IncludePath: "services/python-api/**"},
+			want: "services/python-api",
+		},
+		{
+			name: "include-path single star",
+			cfg:  Config{IncludePath: "libs/*"},
+			want: "libs",
+		},
+		{
+			name: "include-path bare glob",
+			cfg:  Config{IncludePath: "**"},
+			want: "",
+		},
+		{
+			name: "package path takes precedence over include-path",
+			cfg: Config{
+				CurrentPackage: &Package{Path: "services/api"},
+				IncludePath:    "services/other/**",
+			},
+			want: "services/api",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.cfg.ServicePath()
+			if got != tt.want {
+				t.Errorf("ServicePath() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoad_ReleaseModeFromFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)

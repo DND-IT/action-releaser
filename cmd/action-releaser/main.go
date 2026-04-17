@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -40,17 +39,31 @@ func run() error {
 	// 2. Configure git auth for push operations.
 	gitutil.ConfigureAuth(cfg.GithubToken)
 
-	// 3. If release-mode is "pr" and this is a PR merge event, handle it.
+	// 3. If release-mode is "pr", check for a merged release PR via the API.
+	//    This works on any event type (push, pull_request, workflow_dispatch),
+	//    matching how release-please operates.
 	if cfg.ReleaseMode == "pr" {
-		manifest, err := releasepr.DetectMerge()
+		owner, repo, err := release.OwnerRepoFromEnv()
+		if err != nil {
+			return err
+		}
+		ghClient := github.NewClient(nil).WithAuthToken(cfg.GithubToken)
+		prClient := releasepr.NewClient(ghClient, owner, repo)
+
+		baseBranch := os.Getenv("GITHUB_REF_NAME")
+		if baseBranch == "" {
+			baseBranch = "main"
+		}
+
+		result, err := prClient.DetectMerge(context.Background(), baseBranch)
 		if err != nil {
 			return fmt.Errorf("detect merge: %w", err)
 		}
-		if manifest != nil {
-			log.Printf("release PR merge detected: tag=%s version=%s", manifest.Tag, manifest.Version)
-			return handleReleasePRMerge(cfg, manifest)
+		if result != nil {
+			log.Printf("release PR merge detected: tag=%s version=%s", result.Manifest.Tag, result.Manifest.Version)
+			return handleReleasePRMerge(cfg, prClient, result)
 		}
-		// Not a merge event — fall through to create/update PR.
+		// No merged release PR found — fall through to create/update PR.
 	}
 
 	// 3. Shallow-clone guard.
@@ -180,7 +193,7 @@ func createOrUpdateReleasePR(cfg config.Config, version, tag, cl string) error {
 		baseBranch = "main"
 	}
 
-	prURL, prNumber, created, err := client.CreateOrUpdate(context.Background(), version, tag, cl, baseBranch)
+	prURL, prNumber, created, err := client.CreateOrUpdate(context.Background(), version, tag, cl, baseBranch, cfg.ServicePath())
 	if err != nil {
 		return fmt.Errorf("create/update release PR: %w", err)
 	}
@@ -196,9 +209,9 @@ func createOrUpdateReleasePR(cfg config.Config, version, tag, cl string) error {
 	})
 }
 
-func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error {
-	tag := manifest.Tag
-	version := manifest.Version
+func handleReleasePRMerge(cfg config.Config, prClient *releasepr.Client, result *releasepr.MergeResult) error {
+	tag := result.Manifest.Tag
+	version := result.Manifest.Version
 
 	// If manifest didn't have version, recalculate.
 	if version == "" {
@@ -214,15 +227,15 @@ func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error
 		if err != nil {
 			return err
 		}
-		result, err := strat.NextVersion(tags, cfg)
+		vResult, err := strat.NextVersion(tags, cfg)
 		if err != nil {
 			return err
 		}
-		if result.Skipped {
+		if vResult.Skipped {
 			log.Printf("skipped after recalculation")
 			return nil
 		}
-		version = result.Version
+		version = vResult.Version
 		tag = cfg.TagPrefix + version
 	}
 
@@ -273,14 +286,9 @@ func handleReleasePRMerge(cfg config.Config, manifest *releasepr.Manifest) error
 	log.Printf("release created: %s", res.URL)
 
 	// Cleanup: swap labels, delete branch.
-	ghClient := github.NewClient(nil).WithAuthToken(cfg.GithubToken)
-	prClient := releasepr.NewClient(ghClient, owner, repo)
-
-	// Read PR number from event.
-	prNumber := getPRNumberFromEvent()
 	branchName := releasepr.ReleaseBranchName(tag, version)
-	if prNumber > 0 {
-		prClient.Cleanup(context.Background(), prNumber, branchName)
+	if result.PRNumber > 0 {
+		prClient.Cleanup(context.Background(), result.PRNumber, branchName)
 	}
 
 	return setOutputs(actionOutputs{
@@ -400,22 +408,3 @@ func boolStr(b bool) string {
 	return "false"
 }
 
-func getPRNumberFromEvent() int {
-	eventPath := os.Getenv("GITHUB_EVENT_PATH")
-	if eventPath == "" {
-		return 0
-	}
-	data, err := os.ReadFile(eventPath)
-	if err != nil {
-		return 0
-	}
-	var event struct {
-		PullRequest struct {
-			Number int `json:"number"`
-		} `json:"pull_request"`
-	}
-	if err := json.Unmarshal(data, &event); err != nil {
-		return 0
-	}
-	return event.PullRequest.Number
-}
