@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/DND-IT/action-releaser/compare/v0.2.1...v0.2.2) (2026-04-17)
+
+
+### Features
+
+* detect release PR merges via GitHub API ([0328f3c](https://github.com/DND-IT/action-releaser/commit/0328f3cc99d640e4c96a543685cd65000f9737d9))
+
 ## [0.2.1](https://github.com/DND-IT/action-releaser/compare/v0.2.0...v0.2.1) (2026-04-14)
 
 
