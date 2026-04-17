@@ -101,7 +101,7 @@ func runReleaser(t *testing.T, dir string, env map[string]string) (string, error
 	}
 
 	overrides := map[string]string{
-		"GITHUB_OUTPUT":      outputFile,
+		"GITHUB_OUTPUT":       outputFile,
 		"CLIFF_TEMPLATES_DIR": filepath.Join(repoRoot(t), "cliff-templates"),
 	}
 	for k, v := range env {
@@ -125,7 +125,7 @@ func readOutput(t *testing.T, dir string, env map[string]string) map[string]stri
 	}
 
 	overrides := map[string]string{
-		"GITHUB_OUTPUT":      outputFile,
+		"GITHUB_OUTPUT":       outputFile,
 		"CLIFF_TEMPLATES_DIR": filepath.Join(repoRoot(t), "cliff-templates"),
 	}
 	for k, v := range env {

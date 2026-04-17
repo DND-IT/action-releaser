@@ -12,7 +12,7 @@ import (
 // Semver implements VersionStrategy using git-cliff --bumped-version.
 type Semver struct{}
 
-func (s *Semver) Name() string        { return "semver" }
+func (s *Semver) Name() string         { return "semver" }
 func (s *Semver) AlwaysReleases() bool { return false }
 
 func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {

@@ -2,9 +2,10 @@
 // create/update a release PR on push, detect merge and trigger release.
 //
 // Flow:
-//   push to main → CreateOrUpdate() → release PR with changelog + manifest
-//   push to main → DetectMerge()    → finds merged PR via API, returns manifest
-//   post-release → Cleanup()        → swap labels, delete branch
+//
+//	push to main → CreateOrUpdate() → release PR with changelog + manifest
+//	push to main → DetectMerge()    → finds merged PR via API, returns manifest
+//	post-release → Cleanup()        → swap labels, delete branch
 package releasepr
 
 import (

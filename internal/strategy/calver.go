@@ -15,7 +15,7 @@ type CalVer struct {
 	Now func() time.Time
 }
 
-func (d *CalVer) Name() string        { return "calver" }
+func (d *CalVer) Name() string         { return "calver" }
 func (d *CalVer) AlwaysReleases() bool { return true }
 
 func (d *CalVer) now() time.Time {

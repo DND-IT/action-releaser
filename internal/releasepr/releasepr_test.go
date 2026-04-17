@@ -204,7 +204,7 @@ func TestDetectMerge_EmptyList(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/owner/repo/pulls", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `[]`)
+		_, _ = fmt.Fprint(w, `[]`)
 	})
 	c, cleanup := newTestClient(t, mux)
 	defer cleanup()

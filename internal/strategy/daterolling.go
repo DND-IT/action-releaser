@@ -15,7 +15,7 @@ type DateRolling struct {
 	Now func() time.Time
 }
 
-func (d *DateRolling) Name() string        { return "date-rolling" }
+func (d *DateRolling) Name() string         { return "date-rolling" }
 func (d *DateRolling) AlwaysReleases() bool { return true }
 
 func (d *DateRolling) now() time.Time {

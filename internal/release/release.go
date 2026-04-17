@@ -35,12 +35,12 @@ func Create(ctx context.Context, p Params) (Result, error) {
 	client := github.NewClient(nil).WithAuthToken(p.Token)
 
 	release := &github.RepositoryRelease{
-		TagName:         github.Ptr(p.Tag),
-		Name:            github.Ptr(p.Name),
-		Body:            github.Ptr(p.Body),
-		Draft:           github.Ptr(p.Draft),
-		Prerelease:      github.Ptr(p.Prerelease),
-		MakeLatest:      github.Ptr("true"),
+		TagName:              github.Ptr(p.Tag),
+		Name:                 github.Ptr(p.Name),
+		Body:                 github.Ptr(p.Body),
+		Draft:                github.Ptr(p.Draft),
+		Prerelease:           github.Ptr(p.Prerelease),
+		MakeLatest:           github.Ptr("true"),
 		GenerateReleaseNotes: github.Ptr(false),
 	}
 
