@@ -164,10 +164,12 @@ func processPackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 	}
 	log.Printf("changelog: %d bytes", len(cl))
 
-	// Dry-run: output version and changelog, skip tag/release.
+	// Dry-run: output version and changelog. Leave tag/release-url empty
+	// to mirror reality — no tag was created, so downstream steps shouldn't
+	// be tricked into thinking one exists.
 	if cfg.DryRun {
-		log.Printf("dry-run: skipping tag creation and release")
-		return setOutputs(actionOutputs{version: result.Version, changelog: cl, tag: tag, previousVersion: result.PreviousVersion, releaseMode: cfg.ReleaseMode, dryRun: true})
+		log.Printf("dry-run: skipping tag creation and release (would tag: %s)", tag)
+		return setOutputs(actionOutputs{version: result.Version, changelog: cl, previousVersion: result.PreviousVersion, releaseMode: cfg.ReleaseMode, dryRun: true})
 	}
 
 	// Release PR mode: create/update PR instead of releasing directly.
