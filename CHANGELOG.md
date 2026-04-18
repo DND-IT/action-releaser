@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/DND-IT/action-releaser/compare/v0.2.3...v0.2.4) (2026-04-18)
+
+
+### Bug Fixes
+
+* leave tag output empty in dry-run mode ([0e59d3c](https://github.com/DND-IT/action-releaser/commit/0e59d3ccb432d1ec5551432a9caa2d4af9c57c43))
+
 ## [0.2.3](https://github.com/DND-IT/action-releaser/compare/v0.2.2...v0.2.3) (2026-04-17)
 
 
