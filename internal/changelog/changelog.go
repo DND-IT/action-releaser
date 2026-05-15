@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dnd-it/action-releaser/internal/config"
+	"github.com/dnd-it/action-releaser/internal/strategy"
 )
 
 const maxChangelogBytes = 100 * 1024 // 100KB — safety margin under GitHub's 125KB limit.
@@ -24,8 +25,16 @@ func Generate(cfg config.Config) (string, error) {
 	}
 	args := []string{rangeFlag, "--strip", "all"}
 
-	if cfg.CliffConfig != "" {
-		args = append([]string{"--config", cfg.CliffConfig}, args...)
+	cliffConfig := cfg.CliffConfig
+	if cliffConfig == "" {
+		// Without --config, git-cliff falls back to its embedded keepachangelog
+		// template (emoji-prefixed headers, "## [unreleased]" section). Pin to
+		// the built-in template for the active strategy so direct mode renders
+		// the same sections that drive version bumping.
+		cliffConfig = strategy.FindBuiltinConfig(cfg.VersionStrategy)
+	}
+	if cliffConfig != "" {
+		args = append([]string{"--config", cliffConfig}, args...)
 	}
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.Path != "" {
 		args = append(args, "--include-path", cfg.CurrentPackage.Path+"/**")

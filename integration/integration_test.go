@@ -195,6 +195,14 @@ func TestSemverRelease(t *testing.T) {
 	if outputs["changelog"] == "" {
 		t.Error("expected non-empty changelog")
 	}
+	// The changelog must be rendered with our bundled cliff-templates/semver.toml
+	// (plain section headings, no top-level header). Git-cliff's embedded
+	// keepachangelog default produces emoji-prefixed headings (e.g. "### 🚀
+	// Features") under an "## [unreleased]" header — both must be absent.
+	cl := outputs["changelog"]
+	if strings.Contains(cl, "🐛") || strings.Contains(cl, "🚀") || strings.Contains(cl, "[unreleased]") {
+		t.Errorf("changelog rendered with git-cliff default template instead of bundled semver.toml; got:\n%s", cl)
+	}
 }
 
 func TestCalVerRelease(t *testing.T) {
