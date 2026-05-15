@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.4.0](https://github.com/DND-IT/action-releaser/compare/v0.3.0...v0.4.0) (2026-05-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* version-strategy no longer accepts "date-rolling" or "numeric-rolling". Use "calver" (calendar versioning, YYYY.MM.DD[.N]) instead of "date-rolling". Numeric-rolling has no replacement.
+
+### Features
+
+* add include-path input for monorepo commit scoping ([e568c4b](https://github.com/DND-IT/action-releaser/commit/e568c4b04c441b7d0faa0ec7a5a9950cfe601ac5))
+* add release PR mode for gated releases ([bff03a0](https://github.com/DND-IT/action-releaser/commit/bff03a0f14ae88bedd835f748f8e0721aca0c71e))
+* add release-mode, pr-created, and tag-in-pr-mode outputs ([17cd822](https://github.com/DND-IT/action-releaser/commit/17cd822f2c8b37bf1cf9bfca5e5be23556985e7b))
+* default tag-prefix to "v" under semver ([#23](https://github.com/DND-IT/action-releaser/issues/23)) ([17de363](https://github.com/DND-IT/action-releaser/commit/17de363140e22ae1949664220034c3360cf101ff))
+* detect release PR merges via GitHub API ([0328f3c](https://github.com/DND-IT/action-releaser/commit/0328f3cc99d640e4c96a543685cd65000f9737d9))
+* initial implementation of action-releaser ([6009e9f](https://github.com/DND-IT/action-releaser/commit/6009e9f7ba6b0442ba5b9ac5b00bacbe63706386))
+* pin action.yaml image to versioned GHCR tag ([#8](https://github.com/DND-IT/action-releaser/issues/8)) ([0df573f](https://github.com/DND-IT/action-releaser/commit/0df573f8907ba150270cf9c768bd31dc286d4207))
+* replace date-rolling/numeric-rolling with calver, drop numeric-rolling ([4a316f8](https://github.com/DND-IT/action-releaser/commit/4a316f8eaae2c82002704210f7581532e0e8e547))
+* split release-url semantics and add structured PR outputs ([3435695](https://github.com/DND-IT/action-releaser/commit/343569559642d251a10856e01409db86b106b093))
+* support .release.yaml in addition to .release.yml ([fdf084b](https://github.com/DND-IT/action-releaser/commit/fdf084b887f671f69c7a11209ba3074e2b2e24dc))
+
+
+### Bug Fixes
+
+* add safe.directory for Docker container workspace trust ([7d6ada2](https://github.com/DND-IT/action-releaser/commit/7d6ada270cbf9e4e69c3e980e3a62d516cde4125))
+* change action.yaml tag-prefix default to empty string ([2d601ea](https://github.com/DND-IT/action-releaser/commit/2d601ea9fb943cf392ad92c41f10a0c7de899973))
+* change default TagPrefix from "v" to empty string ([340d4fa](https://github.com/DND-IT/action-releaser/commit/340d4fa550511a46bb04e7065df5ba17aec3a951))
+* configure git auth for tag push in Docker containers ([ccad4d6](https://github.com/DND-IT/action-releaser/commit/ccad4d6b4d34b64efe47ad351d42dc7c2af4763c))
+* detect merged PRs via merged_at, not the boolean merged field ([441c23c](https://github.com/DND-IT/action-releaser/commit/441c23c6fb9c888e783da5a99afbfa92b0695162))
+* leave tag output empty in dry-run mode ([0e59d3c](https://github.com/DND-IT/action-releaser/commit/0e59d3ccb432d1ec5551432a9caa2d4af9c57c43))
+* read Docker action inputs with hyphens (INPUT_DRY-RUN not INPUT_DRY_RUN) ([c651d57](https://github.com/DND-IT/action-releaser/commit/c651d57629147ae71204bc47ba57274ca72c5c2e))
+* **releasepr:** force-push branch on update to avoid closing open PR ([74a2b4b](https://github.com/DND-IT/action-releaser/commit/74a2b4ba1ba707e9f8fb78d6233f26fd83970f35))
+* remove --include-path from git-cliff --bumped-version ([fd4bed6](https://github.com/DND-IT/action-releaser/commit/fd4bed6bdc151b629710f264db97da82271a8207))
+* strict tag-prefix matching to prevent monorepo cross-contamination ([dd7da33](https://github.com/DND-IT/action-releaser/commit/dd7da3313fbfcfc9987ae106551cd6ffdc892a2e))
+* **test:** correct truncate assertion to compare against input length not byte constant ([7ad9908](https://github.com/DND-IT/action-releaser/commit/7ad990825b7cef130b6d386a15362d4b0807c718))
+* **test:** use 2x input size so truncated+suffix is always shorter than original ([bed71f9](https://github.com/DND-IT/action-releaser/commit/bed71f99d6c497f0177e553177a456aa9f64f94f))
+* use --unreleased flag for git-cliff in PR release mode ([b0f0afb](https://github.com/DND-IT/action-releaser/commit/b0f0afbe0d8182f0a350f1237b489511e62ed875))
+* use bundled cliff template for changelog rendering ([4a93035](https://github.com/DND-IT/action-releaser/commit/4a930354a8dde0ba0f9d3e55d8c6a3e9dad230f9))
+* use bundled cliff template for changelog rendering ([d163602](https://github.com/DND-IT/action-releaser/commit/d163602bfbc10ff3f777f9fe21c3fe791ab70e47))
+* use Dockerfile for action image until first GHCR publish ([c4e9eed](https://github.com/DND-IT/action-releaser/commit/c4e9eed774e9a725b0ca51d675558f47ad11dfc3))
+* use stable release branch names to prevent noisy PR diffs ([f1d3f46](https://github.com/DND-IT/action-releaser/commit/f1d3f46d5adf15928461c4e2d6149f175ae2d76b))
+* use token-embedded remote URL for git push auth ([4c189e2](https://github.com/DND-IT/action-releaser/commit/4c189e23892a1b76f9898f8edf38faaa0a130187))
+
 ## [0.2.4](https://github.com/DND-IT/action-releaser/compare/v0.2.3...v0.3.0) (2026-05-15)
 
 
