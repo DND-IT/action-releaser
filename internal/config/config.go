@@ -153,6 +153,19 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("unknown release-mode %q: use direct or pr", cfg.ReleaseMode)
 	}
 
+	// Strategy-aware tag-prefix default. GitHub Actions inputs can't distinguish
+	// "user left it empty" from "user explicitly set empty," so an unset prefix
+	// arrives as "". For semver we fill in "v" because:
+	//   - it's the conventional tag format (v1.2.3) used by semver.org examples,
+	//     GitHub's tag UI, release-please, and this action's own README;
+	//   - an empty prefix skips --tag-pattern filtering in main.go, so git-cliff
+	//     sees unrelated tags in the repo and can pick up garbage versions.
+	// Calver tags (2026.03.27) don't have a community-standard prefix, so we
+	// leave it empty.
+	if cfg.VersionStrategy == "semver" && cfg.TagPrefix == "" {
+		cfg.TagPrefix = "v"
+	}
+
 	return cfg, nil
 }
 
