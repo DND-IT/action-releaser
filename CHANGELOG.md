@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.4](https://github.com/DND-IT/action-releaser/compare/v0.2.3...v0.3.0) (2026-05-15)
+
+
+### Features
+
+* default tag-prefix to "v" under semver ([#23](https://github.com/DND-IT/action-releaser/issues/23)) ([17de363](https://github.com/DND-IT/action-releaser/commit/17de363140e22ae1949664220034c3360cf101ff))
+
+
+### Bug Fixes
+
+* leave tag output empty in dry-run mode ([0e59d3c](https://github.com/DND-IT/action-releaser/commit/0e59d3ccb432d1ec5551432a9caa2d4af9c57c43))
+* use bundled cliff template for changelog rendering ([4a93035](https://github.com/DND-IT/action-releaser/commit/4a930354a8dde0ba0f9d3e55d8c6a3e9dad230f9))
+* use bundled cliff template for changelog rendering ([d163602](https://github.com/DND-IT/action-releaser/commit/d163602bfbc10ff3f777f9fe21c3fe791ab70e47))
+
 ## [0.2.3](https://github.com/DND-IT/action-releaser/compare/v0.2.2...v0.2.3) (2026-04-17)
 
 
