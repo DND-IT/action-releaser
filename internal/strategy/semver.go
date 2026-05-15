@@ -49,7 +49,7 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 	if cliffConfig == "" {
 		// Use the built-in semver template which has filter_commits = true.
 		// This ensures non-conventional commits don't trigger a patch bump.
-		cliffConfig = findBuiltinConfig("semver")
+		cliffConfig = FindBuiltinConfig("semver")
 	}
 	if cliffConfig != "" {
 		args = append([]string{"--config", cliffConfig}, args...)
@@ -105,12 +105,12 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 	}, nil
 }
 
-// findBuiltinConfig locates a built-in cliff template by strategy name.
+// FindBuiltinConfig locates a built-in cliff template by strategy name.
 // Search order:
 //  1. CLIFF_TEMPLATES_DIR env var (for local dev/testing)
 //  2. /cliff-templates/ (Docker image)
 //  3. ./cliff-templates/ (run from repo root)
-func findBuiltinConfig(strategy string) string {
+func FindBuiltinConfig(strategy string) string {
 	file := strategy + ".toml"
 	if dir := os.Getenv("CLIFF_TEMPLATES_DIR"); dir != "" {
 		p := dir + "/" + file
