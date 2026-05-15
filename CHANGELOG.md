@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/DND-IT/action-releaser/compare/v0.3.1...v0.3.2) (2026-05-15)
+
+
+### Bug Fixes
+
+* use --unreleased for changelog generation in direct mode ([#27](https://github.com/DND-IT/action-releaser/issues/27)) ([1537629](https://github.com/DND-IT/action-releaser/commit/1537629db705d06a25d51c1ad7d76544d9406d22))
+
 ## [0.3.1](https://github.com/DND-IT/action-releaser/compare/v0.3.0...v0.3.1) (2026-05-15)
 
 
