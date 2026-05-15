@@ -32,6 +32,9 @@ func TestLoad_NoFile(t *testing.T) {
 	if cfg.VersionStrategy != "semver" {
 		t.Errorf("strategy = %q, want semver", cfg.VersionStrategy)
 	}
+	if cfg.TagPrefix != "v" {
+		t.Errorf("default prefix under semver = %q, want v", cfg.TagPrefix)
+	}
 }
 
 func TestLoad_WithFile(t *testing.T) {
@@ -146,6 +149,55 @@ tag-prefix: "release-"
 	}
 	if cfg.TagPrefix != "build-" {
 		t.Errorf("prefix = %q, want build- (env override)", cfg.TagPrefix)
+	}
+}
+
+func TestLoad_SemverDefaultsToVPrefix(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("INPUT_VERSION_STRATEGY", "semver")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TagPrefix != "v" {
+		t.Errorf("semver with empty tag-prefix should default to %q, got %q", "v", cfg.TagPrefix)
+	}
+}
+
+func TestLoad_CalverKeepsEmptyPrefix(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("INPUT_VERSION_STRATEGY", "calver")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TagPrefix != "" {
+		t.Errorf("calver should not get an auto-prefix, got %q", cfg.TagPrefix)
+	}
+}
+
+func TestLoad_ExplicitPrefixOverridesSemverDefault(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, k := range []string{"INPUT_VERSION_STRATEGY", "INPUT_TAG_PREFIX", "INPUT_CLIFF_CONFIG", "INPUT_RELEASE_MODE", "INPUT_DRAFT", "INPUT_PRERELEASE", "INPUT_DRY_RUN", "INPUT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("INPUT_VERSION_STRATEGY", "semver")
+	t.Setenv("INPUT_TAG_PREFIX", "release-")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TagPrefix != "release-" {
+		t.Errorf("explicit tag-prefix should win, got %q", cfg.TagPrefix)
 	}
 }
 
