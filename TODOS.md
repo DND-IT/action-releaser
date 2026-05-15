@@ -5,42 +5,6 @@ ordered by impact within each group.
 
 ---
 
-## Active bugs
-
-### 0. Direct-mode release notes are one release behind
-**Symptom:** GitHub Release notes contain commits from the *previous* release range, not the commits introduced in the current release. Observed in `DND-IT/cms-cassandra-keepalive`:
-- v0.1.1 (tagged on commit `ae9cafd`, #5) — body shows the "[0.1.0]" section with commits before v0.1.0.
-- v0.1.2 (tagged on commit `14ae2cd`, #6) — body shows commits #4 and #5 (the v0.1.0..v0.1.1 range); commit #6 is missing.
-
-**Root cause:** In `cmd/action-releaser/main.go`, `changelog.Generate(cfg)` is called at line 161 — *before* `gitutil.CreateTag(...)` inside `directRelease` (line 317). But `internal/changelog/changelog.go:18-25` assumes the opposite:
-
-```go
-// In PR mode no tag has been created yet, so --latest would resolve to the
-// previous release's range. Use --unreleased to capture all commits since
-// the last tag. In direct mode the tag is created before this runs, so
-// --latest correctly resolves to the new release's range.
-rangeFlag := "--latest"
-if cfg.ReleaseMode == "pr" {
-    rangeFlag = "--unreleased"
-}
-```
-
-The comment is wrong about direct mode. Since the tag doesn't yet exist when `git-cliff` runs, `--latest` resolves to the *previous* tag and emits the prior release's range. Commit `b0f0afb` ("fix: use --unreleased flag for git-cliff in PR release mode") fixed this for PR mode but missed direct mode.
-
-**Fix options:**
-1. *(Recommended)* Drop the `pr`-only branch in `changelog.go` and always use `--unreleased`. The tag is never created before `changelog.Generate` in either mode, so `--unreleased` is correct universally.
-2. Reorder `main.go` so `directRelease` creates and pushes the tag before calling `changelog.Generate`. Keeps `--latest` semantically correct but risks orphan tags if changelog generation fails.
-
-**Where:**
-- `cmd/action-releaser/main.go` (lines 160-165, 306-323)
-- `internal/changelog/changelog.go` (lines 17-26)
-- `internal/changelog/changelog_test.go` (assertions will need updating)
-- `integration/integration_test.go` — add a regression test that runs a real release flow and asserts the changelog contains the *current* commits, not the previous range.
-
-**Priority:** P0 — every direct-mode user is shipping wrong release notes today.
-
----
-
 ## Stale code & docs
 
 ### 1. Delete `internal/strategy/daterolling.go`
