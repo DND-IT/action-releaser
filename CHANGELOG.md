@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/DND-IT/action-releaser/compare/v0.3.0...v0.3.1) (2026-05-15)
+
+
+### Bug Fixes
+
+* issue with last release ([#25](https://github.com/DND-IT/action-releaser/issues/25)) ([3532899](https://github.com/DND-IT/action-releaser/commit/3532899fc399f5dfbd8a8fd62a25a71e7852b307))
+
 ## [0.3.0](https://github.com/DND-IT/action-releaser/compare/v0.2.3...v0.3.0) (2026-05-15)
 
 
