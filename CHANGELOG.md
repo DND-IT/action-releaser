@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.4](https://github.com/DND-IT/action-releaser/compare/v0.2.3...v0.3.0) (2026-05-15)
+## [0.3.0](https://github.com/DND-IT/action-releaser/compare/v0.2.3...v0.3.0) (2026-05-15)
 
 
 ### Features
