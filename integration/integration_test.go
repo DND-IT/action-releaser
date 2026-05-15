@@ -205,6 +205,40 @@ func TestSemverRelease(t *testing.T) {
 	}
 }
 
+// TestDirectModeChangelogIsCurrentRelease is a regression test for the bug
+// where direct-mode release notes contained commits from the *previous*
+// release range (changelog.Generate ran before the new tag existed, so
+// git-cliff --latest resolved to the prior tag). The fix is to always pass
+// --unreleased; this test would fail under the old --latest behaviour because
+// the changelog would describe the v0.1.0..v0.1.1 range and miss commit C.
+func TestDirectModeChangelogIsCurrentRelease(t *testing.T) {
+	dir := setupRepo(t)
+	commit(t, dir, "feat: commit A initial feature")
+	tag(t, dir, "v0.1.0")
+	commit(t, dir, "fix: commit B previous range fix")
+	tag(t, dir, "v0.1.1")
+	commit(t, dir, "feat: commit C current release feature")
+
+	outputs := readOutput(t, dir, map[string]string{
+		"INPUT_VERSION_STRATEGY": "semver",
+		"INPUT_TAG_PREFIX":       "v",
+		"INPUT_RELEASE_MODE":     "direct",
+		"INPUT_DRY_RUN":          "true",
+	})
+
+	// git-cliff applies `| upper_first` to commit messages, so match case-insensitively.
+	cl := strings.ToLower(outputs["changelog"])
+	if !strings.Contains(cl, "commit c current release feature") {
+		t.Errorf("changelog missing current release commit; got:\n%s", outputs["changelog"])
+	}
+	if strings.Contains(cl, "commit b previous range fix") {
+		t.Errorf("changelog contains previous range commit (regression: --latest behaviour); got:\n%s", outputs["changelog"])
+	}
+	if strings.Contains(cl, "commit a initial feature") {
+		t.Errorf("changelog contains pre-v0.1.0 commit (range too wide); got:\n%s", outputs["changelog"])
+	}
+}
+
 func TestCalVerRelease(t *testing.T) {
 	dir := setupRepo(t)
 	commit(t, dir, "some work")

@@ -15,15 +15,12 @@ const maxChangelogBytes = 100 * 1024 // 100KB — safety margin under GitHub's 1
 // Generate produces a changelog using git-cliff.
 // Returns the changelog text, truncated to maxChangelogBytes if needed.
 func Generate(cfg config.Config) (string, error) {
-	// In PR mode no tag has been created yet, so --latest would resolve to the
-	// previous release's range. Use --unreleased to capture all commits since
-	// the last tag. In direct mode the tag is created before this runs, so
-	// --latest correctly resolves to the new release's range.
-	rangeFlag := "--latest"
-	if cfg.ReleaseMode == "pr" {
-		rangeFlag = "--unreleased"
-	}
-	args := []string{rangeFlag, "--strip", "all"}
+	// Always use --unreleased. In both direct and pr modes the new tag is
+	// created *after* this function runs, so --latest would resolve to the
+	// previous tag and emit that release's range — one release behind.
+	// --unreleased captures every commit since the last tag, which is what
+	// the release notes should describe.
+	args := []string{"--unreleased", "--strip", "all"}
 
 	cliffConfig := cfg.CliffConfig
 	if cliffConfig == "" {
