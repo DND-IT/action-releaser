@@ -142,7 +142,7 @@ jobs:
 | `release-mode` | `direct` (release immediately) or `pr` (open release PR, release on merge) | `direct` |
 | `tag-prefix` | Prefix for git tags (e.g. `v`, `release-`) | `""` |
 | `include-path` | Glob to scope commits by file path (e.g. `services/api/**`). Used in monorepos to ensure only commits touching this path affect version calculation and changelog. | `""` |
-| `cliff-config` | Path to custom cliff.toml | auto-detect |
+| `cliff-config` | Path to custom cliff.toml | Uses the cliff-templates in this repo according to version-strategy |
 | `draft` | Create release as draft | `false` |
 | `prerelease` | Mark release as prerelease | `false` |
 | `dry-run` | Calculate version + changelog without creating a release | `false` |

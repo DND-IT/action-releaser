@@ -205,6 +205,61 @@ func TestSemverRelease(t *testing.T) {
 	}
 }
 
+func TestSemverEmptyPrefix(t *testing.T) {
+	dir := setupRepo(t)
+	commit(t, dir, "feat: initial feature")
+	tag(t, dir, "0.1.0")
+	commit(t, dir, "feat: add new feature")
+
+	outputs := readOutput(t, dir, map[string]string{
+		"INPUT_VERSION_STRATEGY": "semver",
+		"INPUT_TAG_PREFIX":       "",
+		"INPUT_DRY_RUN":          "true",
+	})
+
+	if outputs["skipped"] != "false" {
+		t.Fatalf("expected skipped=false, got %q", outputs["skipped"])
+	}
+	if outputs["previous-version"] != "0.1.0" {
+		t.Errorf("previous-version = %q, want 0.1.0", outputs["previous-version"])
+	}
+	if outputs["version"] != "0.2.0" {
+		t.Errorf("version = %q, want 0.2.0 (minor bump from feat:)", outputs["version"])
+	}
+}
+
+// TestSemverEmptyPrefixMultipleTags reproduces the dca-test bug where, with
+// an unprefixed tag history of 0.1.0 → 0.2.0 → 0.2.1 → 1.0.0 and a breaking
+// change since 1.0.0, the action bumped to 0.1.0 instead of 2.0.0.
+func TestSemverEmptyPrefixMultipleTags(t *testing.T) {
+	dir := setupRepo(t)
+	commit(t, dir, "feat: initial")
+	tag(t, dir, "0.1.0")
+	commit(t, dir, "feat: minor bump")
+	tag(t, dir, "0.2.0")
+	commit(t, dir, "fix: patch bump")
+	tag(t, dir, "0.2.1")
+	commit(t, dir, "feat!: first major")
+	tag(t, dir, "1.0.0")
+	commit(t, dir, "feat!: breaking change since 1.0.0")
+
+	outputs := readOutput(t, dir, map[string]string{
+		"INPUT_VERSION_STRATEGY": "semver",
+		"INPUT_TAG_PREFIX":       "",
+		"INPUT_DRY_RUN":          "true",
+	})
+
+	if outputs["skipped"] != "false" {
+		t.Fatalf("expected skipped=false, got %q", outputs["skipped"])
+	}
+	if outputs["previous-version"] != "1.0.0" {
+		t.Errorf("previous-version = %q, want 1.0.0", outputs["previous-version"])
+	}
+	if outputs["version"] != "2.0.0" {
+		t.Errorf("version = %q, want 2.0.0 (major bump from feat!:)", outputs["version"])
+	}
+}
+
 // TestDirectModeChangelogIsCurrentRelease is a regression test for the bug
 // where direct-mode release notes contained commits from the *previous*
 // release range (changelog.Generate ran before the new tag existed, so

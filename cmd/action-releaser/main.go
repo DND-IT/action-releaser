@@ -135,8 +135,7 @@ func processPackage(cfg config.Config, strat strategy.VersionStrategy, pkg confi
 	tags = strategy.FilterTags(tags, cfg.TagPrefix, cfg.VersionStrategy)
 	log.Printf("found %d valid tags matching prefix %q", len(tags), prefix)
 
-	// Compute effective tag pattern for git-cliff scoping.
-	if pkg.TagPattern == "" && cfg.TagPrefix != "" {
+	if pkg.TagPattern == "" {
 		cfg.EffectiveTagPattern = strategy.TagPatternRegex(cfg.TagPrefix, cfg.VersionStrategy)
 	}
 

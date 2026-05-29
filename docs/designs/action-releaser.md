@@ -135,7 +135,7 @@ prerelease: false           # mark as prerelease
 | Input | Description | Default |
 |-------|-------------|---------|
 | `version-strategy` | `semver`, `date-rolling`, `numeric-rolling` | `semver` |
-| `cliff-config` | Path to custom cliff.toml | `""` (auto-detect) |
+| `cliff-config` | Path to custom cliff.toml | `""` Uses the cliff-templates in this repo according to version-strategy |
 | `tag-prefix` | Prefix for git tags | `v` |
 | `draft` | Create release as draft | `false` |
 | `prerelease` | Mark as prerelease | `false` |
