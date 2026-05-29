@@ -8,7 +8,7 @@ inputs:
     required: false
     default: 'semver'
   cliff-config:
-    description: 'Path to custom cliff.toml (auto-detects cliff.toml in repo root if not set)'
+    description: 'Path to custom cliff.toml'
     required: false
     default: ''
   tag-prefix:
