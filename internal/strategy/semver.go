@@ -60,12 +60,12 @@ func (s *Semver) NextVersion(tags []string, cfg config.Config) (Result, error) {
 	// --tag-pattern alone correctly scopes version boundary detection.
 	// --include-path is only used in changelog.Generate() for release notes.
 	//
-	// Always pass --tag-pattern to scope git-cliff's version boundary detection.
-	// Without this, git-cliff sees ALL tags and may use unrelated ones (e.g.
-	// go-service-v1.13.0) as the latest version when releasing python-api.
+	// Always pass --tag-pattern to scope git-cliff's version boundary detection
+	// to this service's tags only; otherwise git-cliff may use unrelated tags
+	// (e.g. go-service-v1.13.0) as the latest version when releasing python-api.
 	if cfg.CurrentPackage != nil && cfg.CurrentPackage.TagPattern != "" {
 		args = append(args, "--tag-pattern", cfg.CurrentPackage.TagPattern)
-	} else if cfg.TagPrefix != "" {
+	} else {
 		args = append(args, "--tag-pattern", TagPatternRegex(cfg.TagPrefix, "semver"))
 	}
 
