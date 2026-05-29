@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/DND-IT/action-releaser/compare/v0.3.2...v0.3.3) (2026-05-29)
+
+
+### Bug Fixes
+
+* revert semver tag-prefix default to empty string ([#29](https://github.com/DND-IT/action-releaser/issues/29)) ([4fd02a7](https://github.com/DND-IT/action-releaser/commit/4fd02a7a20bfdf57f8439c794719a545633ab2eb))
+
 ## [0.3.2](https://github.com/DND-IT/action-releaser/compare/v0.3.1...v0.3.2) (2026-05-15)
 
 
