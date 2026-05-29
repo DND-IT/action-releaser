@@ -12,7 +12,7 @@ inputs:
     required: false
     default: ''
   tag-prefix:
-    description: 'Prefix for git tags (e.g. v, release-). Defaults to "v" under semver, empty under calver.'
+    description: 'Prefix for git tags (e.g. v, release-). Defaults to empty string.'
     required: false
     default: ''
   release-mode:

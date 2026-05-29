@@ -140,7 +140,7 @@ jobs:
 |-------|-------------|---------|
 | `version-strategy` | `semver` or `calver` | `semver` |
 | `release-mode` | `direct` (release immediately) or `pr` (open release PR, release on merge) | `direct` |
-| `tag-prefix` | Prefix for git tags (e.g. `v`, `release-`) | `v` for semver, `""` for calver |
+| `tag-prefix` | Prefix for git tags (e.g. `v`, `release-`) | `""` |
 | `include-path` | Glob to scope commits by file path (e.g. `services/api/**`). Used in monorepos to ensure only commits touching this path affect version calculation and changelog. | `""` |
 | `cliff-config` | Path to custom cliff.toml | auto-detect |
 | `draft` | Create release as draft | `false` |

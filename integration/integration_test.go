@@ -303,30 +303,6 @@ func TestBootstrap(t *testing.T) {
 	}
 }
 
-func TestSemverDefaultsToVPrefix(t *testing.T) {
-	// User scenario: workflow declares `version-strategy: semver` but does not
-	// set `tag-prefix`. The action should fill in the conventional "v" prefix
-	// rather than producing bare-number tags that fight git-cliff's
-	// --tag-pattern scoping.
-	dir := setupRepo(t)
-	commit(t, dir, "feat: initial feature")
-	tag(t, dir, "v0.1.0")
-	commit(t, dir, "feat: another feature")
-
-	outputs := readOutput(t, dir, map[string]string{
-		"INPUT_VERSION_STRATEGY": "semver",
-		// Deliberately omit INPUT_TAG_PREFIX — mirrors the dca-test workflow.
-		"INPUT_DRY_RUN": "true",
-	})
-
-	if outputs["skipped"] != "false" {
-		t.Fatalf("expected skipped=false, got %q", outputs["skipped"])
-	}
-	if outputs["previous-version"] != "v0.1.0" {
-		t.Errorf("previous-version = %q, want v0.1.0 (default prefix should pick up v* tags)", outputs["previous-version"])
-	}
-}
-
 func TestSkipNoConventionalCommits(t *testing.T) {
 	dir := setupRepo(t)
 	commit(t, dir, "feat: initial")
