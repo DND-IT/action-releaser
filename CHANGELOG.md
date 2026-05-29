@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/DND-IT/action-releaser/compare/v0.3.3...v0.3.4) (2026-05-29)
+
+
+### Bug Fixes
+
+* **semver:** handle empty tag-prefix correctly by removing hardcoded … ([#31](https://github.com/DND-IT/action-releaser/issues/31)) ([be63490](https://github.com/DND-IT/action-releaser/commit/be63490eb21244fac7d7e591a91617e36bf8d05d))
+
 ## [0.3.3](https://github.com/DND-IT/action-releaser/compare/v0.3.2...v0.3.3) (2026-05-29)
 
 
