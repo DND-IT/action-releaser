@@ -6,7 +6,7 @@ Supports multiple versioning strategies, monorepo releases, and per-repo configu
 
 ## Features
 
-- **2 versioning strategies:** semver (conventional commits), calver (`2026.03.27`)
+- **2 versioning strategies:** semver (conventional commits), calver (`2026.03.0`)
 - **Two release modes:** `direct` (tag + release on every push) or `pr` (open a release PR, release on merge)
 - **Monorepo support:** release each package independently with path-based filtering
 - **Dry-run mode:** preview the next version and changelog without creating a release
@@ -64,7 +64,7 @@ Parses [conventional commits](https://www.conventionalcommits.org/) to determine
 
 ### CalVer
 
-Version is the current UTC date (`YYYY.MM.DD`). Multiple releases per day get a numeric suffix.
+Version is the current UTC year and month with an incrementing counter (`YYYY.MM.N`). The counter starts at `0` and resets each month.
 
 ```yaml
 - uses: dnd-it/action-releaser@v0
@@ -72,8 +72,9 @@ Version is the current UTC date (`YYYY.MM.DD`). Multiple releases per day get a 
     version-strategy: calver
 ```
 
-- First release of the day → `2026.03.27`
-- Second release same day → `2026.03.27.2`
+- First release of the month → `2026.03.0`
+- Second release same month → `2026.03.1`
+- First release of the next month → `2026.04.0`
 - Always releases (no commit-type gating)
 
 ## Release Modes
