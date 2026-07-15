@@ -7,10 +7,11 @@ ordered by impact within each group.
 
 ## Stale code & docs
 
-### 1. Delete `internal/strategy/daterolling.go`
+### 1. Delete `internal/strategy/daterolling.go` — ✅ DONE
 **What:** Remove the file entirely.
 **Why:** Commit `4a316f8` ("feat!: replace date-rolling/numeric-rolling with calver, drop numeric-rolling") shipped the removal in the CHANGELOG, but the file was never deleted. `strategy.New` only recognises `semver`/`calver`, so `DateRolling` is unreachable. It's a near-duplicate of `calver.go` and confuses readers.
 **Priority:** P1 (one-line cleanup, no risk)
+**Resolution:** File deleted. `DateRolling` was unreachable dead code; build and tests pass without it.
 
 ### 2. Mark or delete `docs/designs/action-releaser.md`
 **What:** Either annotate `STATUS: SUPERSEDED — see CHANGELOG and current code` at the top, or delete.
