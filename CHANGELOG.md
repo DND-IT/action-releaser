@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/DND-IT/action-releaser/compare/v0.3.4...v0.4.0) (2026-07-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **calver:** calver versions are now YYYY.MM.N instead of YYYY.MM.DD[.N]. Repos already on calver will see existing day-based tags reinterpreted as counters for the transition month.
+
+### Features
+
+* **calver:** use YYYY.MM.N format with monthly counter ([#33](https://github.com/DND-IT/action-releaser/issues/33)) ([2018aa1](https://github.com/DND-IT/action-releaser/commit/2018aa15b946eb67000e56880100b0b1c538d0b7))
+
+
+### Bug Fixes
+
+* gated-release auto-close and lost release-published output ([#37](https://github.com/DND-IT/action-releaser/issues/37)) ([08b49db](https://github.com/DND-IT/action-releaser/commit/08b49dbc6a9812007f3317afb599613af7fdeca2)), closes [#35](https://github.com/DND-IT/action-releaser/issues/35)
+
 ## [0.3.4](https://github.com/DND-IT/action-releaser/compare/v0.3.3...v0.3.4) (2026-05-29)
 
 
