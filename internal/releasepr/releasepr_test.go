@@ -343,6 +343,76 @@ func TestDetectMerge_PicksFirstMatchWhenMultiplePresent(t *testing.T) {
 	}
 }
 
+// TestUpdateReleaseBranch_NeverResetsToBase guards the gated-release
+// auto-close regression (#34): the release branch must never be pointed at the
+// bare base SHA. GitHub auto-closes an open PR whose head has 0 commits ahead of
+// its base, so updateReleaseBranch must land the prepare-release commit in a
+// single ref update that leaves the branch ahead of base.
+func TestUpdateReleaseBranch_NeverResetsToBase(t *testing.T) {
+	const (
+		baseSHA   = "1111111111111111111111111111111111111111"
+		treeSHA   = "2222222222222222222222222222222222222222"
+		newTree   = "3333333333333333333333333333333333333333"
+		commitSHA = "4444444444444444444444444444444444444444"
+	)
+	var refUpdates []string
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		switch {
+		case r.Method == http.MethodGet && strings.Contains(p, "/git/ref"):
+			// GetRef for the base branch.
+			writeJSON(w, map[string]any{
+				"ref":    "refs/heads/main",
+				"object": map[string]any{"sha": baseSHA, "type": "commit"},
+			})
+		case r.Method == http.MethodGet && strings.HasSuffix(p, "/git/commits/"+baseSHA):
+			writeJSON(w, map[string]any{"sha": baseSHA, "tree": map[string]any{"sha": treeSHA}})
+		case r.Method == http.MethodPost && strings.HasSuffix(p, "/git/blobs"):
+			writeJSON(w, map[string]any{"sha": "blobsha"})
+		case r.Method == http.MethodPost && strings.HasSuffix(p, "/git/trees"):
+			writeJSON(w, map[string]any{"sha": newTree})
+		case r.Method == http.MethodPost && strings.HasSuffix(p, "/git/commits"):
+			writeJSON(w, map[string]any{"sha": commitSHA})
+		case r.Method == http.MethodPatch && strings.Contains(p, "/git/ref"):
+			// UpdateRef on the release branch — capture the target SHA.
+			var body struct {
+				SHA string `json:"sha"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			refUpdates = append(refUpdates, body.SHA)
+			writeJSON(w, map[string]any{"ref": "refs/heads/release/go-service"})
+		default:
+			http.Error(w, "unexpected request "+r.Method+" "+p, http.StatusNotFound)
+		}
+	})
+
+	c, cleanup := newTestClient(t, mux)
+	defer cleanup()
+
+	manifest, _ := json.Marshal(Manifest{Version: "1.16.0", Tag: "go-service-v1.16.0"})
+	err := c.updateReleaseBranch(context.Background(), "release/go-service", "main", manifest, "", "")
+	if err != nil {
+		t.Fatalf("updateReleaseBranch: %v", err)
+	}
+
+	if len(refUpdates) != 1 {
+		t.Fatalf("expected exactly 1 ref update, got %d: %v", len(refUpdates), refUpdates)
+	}
+	if refUpdates[0] == baseSHA {
+		t.Fatalf("branch was pointed at the bare base SHA %q — this makes GitHub auto-close the release PR", baseSHA)
+	}
+	if refUpdates[0] != commitSHA {
+		t.Errorf("branch updated to %q, want the prepare-release commit %q", refUpdates[0], commitSHA)
+	}
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(v)
+}
+
 func TestDetectMerge_APIError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/owner/repo/pulls", func(w http.ResponseWriter, r *http.Request) {
