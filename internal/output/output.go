@@ -22,8 +22,11 @@ func Set(name, value string) error {
 	}
 
 	if strings.Contains(value, "\n") {
-		// Multi-line: use heredoc delimiter.
-		delim := fmt.Sprintf("RELEASER_EOF_%d", os.Getpid())
+		// Multi-line: use a heredoc delimiter. The delimiter must not appear as
+		// a line in the value, otherwise GitHub's parser ends the heredoc early
+		// and mis-reads everything after it. Extend the delimiter until it is
+		// unique so arbitrary changelog content can never break parsing.
+		delim := heredocDelim(value)
 		_, err = fmt.Fprintf(f, "%s<<%s\n%s\n%s\n", name, delim, value, delim)
 	} else {
 		_, err = fmt.Fprintf(f, "%s=%s\n", name, value)
@@ -33,4 +36,25 @@ func Set(name, value string) error {
 		return err
 	}
 	return f.Close()
+}
+
+// heredocDelim returns a delimiter guaranteed not to appear as a line in value,
+// so the heredoc written to $GITHUB_OUTPUT is always well-formed.
+func heredocDelim(value string) string {
+	base := fmt.Sprintf("RELEASER_EOF_%d", os.Getpid())
+	delim := base
+	for i := 0; containsLine(value, delim); i++ {
+		delim = fmt.Sprintf("%s_%d", base, i)
+	}
+	return delim
+}
+
+// containsLine reports whether s has a line exactly equal to line.
+func containsLine(s, line string) bool {
+	for _, l := range strings.Split(s, "\n") {
+		if strings.TrimRight(l, "\r") == line {
+			return true
+		}
+	}
+	return false
 }
