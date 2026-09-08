@@ -264,24 +264,12 @@ The action runs a Go binary inside a Docker container with git-cliff pre-install
 4. Swap PR labels (`autorelease: pending` → `autorelease: tagged`) and delete the release branch
 5. Write outputs (`release-url`, `release-published`, etc.)
 
-## Development
+## Implementation
 
-```bash
-# Build
-go build -o action-releaser ./cmd/action-releaser
-
-# Unit tests
-go test -v -race ./...
-
-# Integration tests (requires git-cliff installed)
-go test -v -tags=integration ./integration/...
-
-# Local e2e test
-./scripts/test-local.sh
-
-# Docker build
-docker build -t action-releaser:test .
-```
+This action is a thin shim over [tamci](https://github.com/DND-IT/tamci): `action.yaml` runs the
+`ghcr.io/dnd-it/tamci` image with `args: [release]`. The Go code, tests, and release
+process live in that repo. To pick up a new tamci version, bump the image tag in
+`action.yaml`.
 
 ## License
 

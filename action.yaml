@@ -1,4 +1,4 @@
-name: 'action-releaser'
+name: 'action-release'
 description: 'Flexible GitHub Action for versioned releases powered by git-cliff'
 author: 'group:default/dai'
 
@@ -8,15 +8,15 @@ inputs:
     required: false
     default: 'semver'
   cliff-config:
-    description: 'Path to custom cliff.toml'
+    description: 'Path to custom cliff.toml (auto-detects cliff.toml in repo root if not set)'
     required: false
     default: ''
   tag-prefix:
-    description: 'Prefix for git tags (e.g. v, release-). Defaults to empty string.'
+    description: 'Prefix for git tags (e.g. v, release-)'
     required: false
     default: ''
   release-mode:
-    description: 'Release mode: direct (immediate release) or pr (create release PR, release on merge)'
+    description: 'Release mode: direct (immediate release) or pr (release Pull Request, release on merge)'
     required: false
     default: 'direct'
   draft:
@@ -28,7 +28,7 @@ inputs:
     required: false
     default: 'false'
   include-path:
-    description: 'Glob pattern to scope commits by file path (e.g. "services/api/**"). Used in monorepos to ensure only commits touching this path affect version calculation and changelog.'
+    description: 'Glob pattern to scope commits by file path (e.g. "services/api/**").'
     required: false
     default: ''
   dry-run:
@@ -48,29 +48,30 @@ outputs:
   tag:
     description: 'Created git tag (empty if skipped or dry-run)'
   release-url:
-    description: 'URL of the published GitHub Release. Only set when a release is actually created (direct mode, or gated mode after PR merge). Empty in pr mode before the PR is merged.'
+    description: 'URL of the published GitHub Release.'
   previous-version:
     description: 'Previous version tag (empty on first release)'
   skipped:
     description: 'true if no release was created, false otherwise'
   pr-url:
-    description: 'Release PR URL (only in pr mode, same as release-pr-url)'
+    description: 'Release Pull Request URL (only in pr mode).'
   dry-run:
     description: 'true if dry-run mode was active'
   release-published:
-    description: 'true when a GitHub Release was actually created (direct mode or after gated PR merge)'
+    description: 'true when a GitHub Release was actually created.'
   release-pr-url:
-    description: 'URL of the open release PR (only set in pr mode while the PR is pending merge)'
+    description: 'URL of the open release Pull Request (only set in pr mode while pending merge)'
   release-pr-number:
-    description: 'Number of the open release PR (only set in pr mode while the PR is pending merge)'
+    description: 'Number of the open release Pull Request'
   release-mode:
-    description: 'Active release mode: "direct" or "pr". Echoes the release-mode input so downstream jobs can branch without re-reading inputs.'
+    description: 'Active release mode: "direct" or "pr".'
   pr-created:
-    description: 'true when a new release PR was opened in this run; false when an existing PR was updated. Only meaningful in pr mode.'
+    description: 'true when a new release Pull Request was opened in this run.'
 
 runs:
   using: 'docker'
-  image: 'docker://ghcr.io/dnd-it/action-releaser:0.4.0' # x-release-please-version
+  image: 'docker://ghcr.io/dnd-it/tamci:1.0.0'
+  args: [release]
 
 branding:
   icon: 'tag'

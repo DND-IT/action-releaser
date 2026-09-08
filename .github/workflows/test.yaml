@@ -5,132 +5,37 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
 
 permissions:
-  packages: write
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  contents: read
 
 jobs:
-  lint:
+  smoke:
     runs-on: ubuntu-latest
-    name: lint
-    if: github.event.action != 'closed' && !startsWith(github.head_ref, 'release-please--')
+    name: smoke
+    if: "!startsWith(github.head_ref, 'release-please--')"
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: "go.mod"
-
-      - name: install golangci-lint
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-
-      - name: golangci-lint
-        run: golangci-lint run
-
-  test:
-    runs-on: ubuntu-latest
-    name: test
-    if: github.event.action != 'closed' && !startsWith(github.head_ref, 'release-please--')
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: "go.mod"
-
-      - name: run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: check coverage
-        run: |
-          go tool cover -func=coverage.out | tail -1
-
-  integration:
-    runs-on: ubuntu-latest
-    name: integration
-    needs: [lint, test]
-    if: github.event.action != 'closed' && !startsWith(github.head_ref, 'release-please--')
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - id: release
+        uses: ./
         with:
-          go-version-file: "go.mod"
+          version-strategy: semver
+          tag-prefix: v
+          dry-run: "true"
+          github-token: ${{ github.token }}
 
-      - name: install git-cliff
-        # Keep GIT_CLIFF_VERSION in sync with the Dockerfile ARG so integration
-        # tests exercise the same binary that ships in the runtime image.
+      - name: assert outputs
         env:
-          GIT_CLIFF_VERSION: "2.7.0"
+          VERSION: ${{ steps.release.outputs.version }}
+          SKIPPED: ${{ steps.release.outputs.skipped }}
+          DRY_RUN: ${{ steps.release.outputs.dry-run }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
-          curl -sSfL "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | sudo tar xz -C /usr/local/bin "git-cliff-${GIT_CLIFF_VERSION}/git-cliff" --strip-components=1
-          git-cliff --version
-
-      - name: build binary
-        run: go build -o action-releaser ./cmd/action-releaser
-
-      - name: run integration tests
-        run: go test -v -tags=integration ./integration/...
-
-  docker:
-    runs-on: ubuntu-latest
-    name: docker
-    needs: [lint, test]
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: log in to ghcr
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: set image tag
-        id: tag
-        run: echo "value=${{ env.REGISTRY }}/${IMAGE_NAME,,}:pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-        env:
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-
-      - name: build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.tag.outputs.value }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  cleanup:
-    runs-on: ubuntu-latest
-    name: cleanup pr image
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    steps:
-      - name: delete pr image
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OWNER: ${{ github.repository_owner }}
-          TAG: pr-${{ github.event.number }}
-        run: |
-          VERSION_ID=$(gh api \
-            "/orgs/${OWNER}/packages/container/action-releaser/versions" \
-            --jq ".[] | select(.metadata.container.tags[] == \"${TAG}\") | .id")
-          if [ -n "$VERSION_ID" ]; then
-            gh api --method DELETE \
-              "/orgs/${OWNER}/packages/container/action-releaser/versions/${VERSION_ID}"
-            echo "Deleted version ${VERSION_ID} (tag: ${TAG})"
-          else
-            echo "No version found with tag: ${TAG}"
-          fi
+          echo "version=$VERSION skipped=$SKIPPED dry-run=$DRY_RUN tag=$TAG"
+          [ "$DRY_RUN" = "true" ]
+          [ -z "$TAG" ]
+          [ -n "$VERSION" ] || [ "$SKIPPED" = "true" ]
