@@ -1,5 +1,11 @@
 # action-releaser
 
+> [!WARNING]
+> **Deprecated: this action has been replaced by [tamci](https://github.com/DND-IT/tamci).**
+> tamci is a unified Go CLI that consolidates DND-IT's GitHub Actions. No further features or fixes will land in this repository.
+>
+> To migrate, replace `uses: dnd-it/action-releaser@v0` with `uses: DND-IT/tamci/actions/release@v0`. See the [tamci migration guide](https://github.com/DND-IT/tamci/blob/main/docs/migration.md).
+
 Flexible GitHub Action for versioned releases powered by [git-cliff](https://git-cliff.org).
 
 Supports multiple versioning strategies, monorepo releases, and per-repo configuration — designed for orgs where teams have different release needs.
